@@ -245,7 +245,7 @@ tenerla.
         conteo de DSP48E1 SÍ subió (18 → 30), confirmando que los
         coeficientes no triviales generan multiplicadores reales, a
         diferencia de la Etapa 4a.
-  - [ ] **Etapa 4c — Biquad con los coeficientes reales.** Mismos
+  - [x] **Etapa 4c — Biquad con los coeficientes reales.** Mismos
         coeficientes que ya se validaron en software (`analisis/placa/`
         de Sand Monitoring, commit `e979c5c`). Validar en simulación
         contra el mismo archivo real usado en esa validación de software
@@ -253,6 +253,83 @@ tenerla.
         Monitoring), mismo criterio ya usado en todo el proyecto: no
         exigir igualdad numérica exacta, sí que la clasificación de
         arena (kurtosis>=6 por ventana) coincida.
+        **Hecho (2026-09-14), con cambios grandes respecto a lo previsto:**
+
+        - **No se pudieron reusar los coeficientes del software tal
+          cual.** El software filtra la señal YA decimada (`fs=3906250Hz`
+          con decimación 32, o `1953125Hz` con 64 — lee el `fs_hz` real
+          de cada captura desde `session_..._info.json`, ya soporta las
+          dos decimaciones sin cambios). Nuestro filtro en FPGA corría
+          (Etapas 3/4a/4b) **antes** de decimar, a los 125MHz completos
+          del ADC — mismo diseño (banda 50-400kHz, orden 2) pero
+          coeficientes normalizados contra un Nyquist 32-64x más grande,
+          totalmente distintos.
+        - **Un pasabanda de orden 2 son 2 secciones biquad en cascada,
+          no 1** (`scipy.signal.butter(2,...,btype="bandpass")` da 2
+          filas SOS — un pasabanda de orden N tiene 2N polos). Se agregó
+          `bandpass_filter.v`, que cascadea 2 `bandpass_biquad`.
+          `bandpass_biquad.v` pasó a tomar los coeficientes como
+          **parámetros** del módulo (antes hardcodeados) para poder
+          instanciar 2 secciones con coeficientes distintos.
+        - **Bug numérico serio encontrado con datos sintéticos, no con
+          el archivo real:** al validar la respuesta en frecuencia (un
+          tono de prueba a 10kHz, bien por debajo de la banda), el
+          filtro a 125MHz **no atenuaba — quedaba oscilando en un valor
+          fijo no nulo para siempre**, incluso con la entrada en
+          silencio (confirmado con impulso + 2000 muestras de silencio:
+          la salida no volvía a 0). Es un **"limit cycle"** de punto
+          fijo: la banda de interés es una fracción minúscula del
+          Nyquist a 125MHz, así que los polos del filtro quedan
+          pegadísimos al círculo unidad (radio ~0.997-0.999), la
+          ganancia de DC de la realimentación es enorme (~56000x), y
+          cualquier paso de redondeo se vuelve autosostenido.
+        - **Solución: mover el filtro de antes a después del
+          decimador** (`osc_top.v` — ya no está entre `osc_calib` y
+          `osc_decimator`, ahora consume `dec_tdata`/`dec_tvalid`/
+          `dec_tready` y alimenta a `osc_trigger`). A la frecuencia ya
+          decimada los polos quedan mucho más lejos del círculo unidad
+          (radio máx. ~0.71 y ~0.95) y el problema deja de existir por
+          diseño, no por parche. Se corrigió de paso otro bug encontrado
+          en el camino: **redondear en vez de truncar** al reescalar
+          (truncar siempre hacia -infinito generaba un sesgo de DC
+          sistemático que, realimentado, saturaba la salida en corridas
+          largas — confirmado con una simulación de 600k+ muestras).
+          Con el redondeo, el limit-cycle residual bajó a 54 sobre 32768
+          (-55.7dBFS) — no desaparece del todo (es inherente a cualquier
+          IIR con feedback en punto fijo) pero queda muy por debajo de
+          cualquier señal real.
+        - **Limitación conocida, sin resolver:** el factor de decimación
+          (`cfg_dec_factor`) es configurable en tiempo de ejecución: el
+          filtro no. Se diseñó para **decimación 32** (`fs=3906250Hz`,
+          coincide con el archivo de referencia real del proyecto) — si
+          se usa decimación 64 con este mismo bitstream, el filtro queda
+          corrido de banda.
+        - **Bug de latencia al cascadear, encontrado con el testbench:**
+          1+1 no son 2 ciclos — conectar la salida registrada de una
+          sección directo a la entrada registrada de la otra agrega un
+          ciclo extra (latencia real de la cascada: 3 ciclos, no 2).
+        - **Validación:** se armó un script Python
+          (`tbn/vectores/generar_etapa4c.py`, usa el `venv` del repo —
+          ver `COMPILAR.md`) que calcula los coeficientes reales con
+          `scipy`, corre el mismo chequeo de limit-cycle en Python, mide
+          la respuesta en frecuencia (barrido de tonos sintéticos:
+          5kHz/50kHz/141kHz/400kHz/800kHz) contra el diseño ideal, y
+          genera los vectores golden con un modelo que replica exacto la
+          aritmética de punto fijo del RTL (mismo redondeo, misma
+          saturación). Simulación (`etapa4c_sim_bandpass.sh` +
+          `tbn/tb_bandpass_filter.sv`): **45877/45877 checks bit-exactos
+          OK**. Respuesta en frecuencia: diferencias de 0.01-1.2dB contra
+          el diseño ideal. Rebuild completo del bitstream OK (`Bitgen
+          Completed Successfully`, DRC 0 errores, DSP48E1 18→32).
+        - **Lo que esto NO valida todavía** (la comparación original que
+          preveía el plan, contra `datos_campo/42_1_reposo_...` y el
+          criterio de clasificación por kurtosis): no hay una captura
+          cruda a la entrada real del filtro (justo después del
+          decimador, antes de trigger/adquisición) para comparar — el
+          archivo de referencia ya pasó por todo el pipeline de captura
+          tal como existe hoy. Validar contra clasificación real de
+          arena queda pendiente para cuando haya placa nueva y se pueda
+          capturar en ese punto exacto (Etapa 8).
 
 ## Estudio del filtro existente (2026-09-14)
 

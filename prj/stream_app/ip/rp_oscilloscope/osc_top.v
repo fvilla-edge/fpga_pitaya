@@ -284,27 +284,11 @@ osc_calib #(
   .cfg_calib_gain   (cfg_calib_gain_i));
 
 ////////////////////////////////////////////////////////////
-// Name : Pasabanda (deteccion de arena) - Etapa 3 (RedPitaya-FPGA)
-//
-////////////////////////////////////////////////////////////
-bandpass_biquad #(
-  .S_AXIS_DATA_BITS (S_AXIS_DATA_BITS))
-  U_bandpass_biquad(
-  .clk            (clk_adc),
-  .rst_n          (rstn_fil),
-  .s_axis_tdata   (calib_tdata),
-  .s_axis_tvalid  (calib_tvalid),
-  .s_axis_tready  (calib_tready),
-  .m_axis_tdata   (bp_tdata),
-  .m_axis_tvalid  (bp_tvalid),
-  .m_axis_tready  (bp_tready));
-
-////////////////////////////////////////////////////////////
 // Name : Decimation
 //
 ////////////////////////////////////////////////////////////
 assign dec_indata = ramp_en      ? ramp_sig     :
-                   (loopback_dac ? s_axis_tdata : bp_tdata);
+                   (loopback_dac ? s_axis_tdata : calib_tdata);
 
 osc_decimator #(
   .AXIS_DATA_BITS (S_AXIS_DATA_BITS),
@@ -314,8 +298,8 @@ osc_decimator #(
   .clk            (clk_adc),
   .rst_n          (rstn_dec),
   .s_axis_tdata   (dec_indata),
-  .s_axis_tvalid  (bp_tvalid),
-  .s_axis_tready  (bp_tready),
+  .s_axis_tvalid  (calib_tvalid),
+  .s_axis_tready  (calib_tready),
   .m_axis_tdata   (dec_tdata),          
   .m_axis_tvalid  (dec_tvalid),    
   .m_axis_tready  (dec_tready),      
@@ -323,6 +307,37 @@ osc_decimator #(
   .cfg_avg_en     (cfg_avg_en_i),            
   .cfg_dec_factor (cfg_dec_factor_i),        
   .cfg_dec_rshift (cfg_dec_rshift_i));       
+
+////////////////////////////////////////////////////////////
+// Name : Pasabanda (deteccion de arena) - Etapa 4c (RedPitaya-FPGA)
+//
+// Movido de ANTES a DESPUES del decimador (estaba entre osc_calib y
+// osc_decimator en la Etapa 3/4a/4b) - a la frecuencia completa del ADC
+// (125MHz) los polos del filtro quedaban pegadisimos al circulo unidad
+// (banda de interes = fraccion minuscula del Nyquist) y el punto fijo
+// entraba en un "limit cycle" real (la salida quedaba oscilando en un
+// valor no nulo para siempre, ni con entrada en silencio decaia a cero -
+// confirmado con un test de impulso+silencio). Filtrando DESPUES de
+// decimar (misma idea que el software, que filtra la senal ya decimada)
+// los polos quedan mucho mas lejos del circulo unidad y el problema deja
+// de existir por diseno. Coeficientes calculados para fs=3906250Hz
+// (decimacion 32, la que coincide con los datos reales usados para
+// validar el resto del proyecto) - si se usa decimacion 64 con este
+// mismo bitstream, el filtro queda corrido de banda (limitacion conocida,
+// sin resolver: el factor de decimacion es configurable en tiempo de
+// ejecucion via cfg_dec_factor, los coeficientes del filtro no).
+////////////////////////////////////////////////////////////
+bandpass_filter #(
+  .S_AXIS_DATA_BITS (S_AXIS_DATA_BITS))
+  U_bandpass_filter(
+  .clk            (clk_adc),
+  .rst_n          (rstn_dec),
+  .s_axis_tdata   (dec_tdata),
+  .s_axis_tvalid  (dec_tvalid),
+  .s_axis_tready  (dec_tready),
+  .m_axis_tdata   (bp_tdata),
+  .m_axis_tvalid  (bp_tvalid),
+  .m_axis_tready  (bp_tready));
 
 ////////////////////////////////////////////////////////////
 // Name : Trigger
@@ -340,9 +355,9 @@ osc_trigger #(
   .cfg_trig_high_level  (cfg_trig_high_level_i),         
   .cfg_trig_edge        (cfg_trig_edge_i),                                                 
   .trig                 (trig_op),                                                    
-  .s_axis_tdata         (dec_tdata),                
-  .s_axis_tvalid        (dec_tvalid),               
-  .s_axis_tready        (dec_tready),                                                          
+  .s_axis_tdata         (bp_tdata),                
+  .s_axis_tvalid        (bp_tvalid),               
+  .s_axis_tready        (bp_tready),                                                          
   .m_axis_tdata         (trig_tdata),                
   .m_axis_tvalid        (trig_tvalid),  
   .m_axis_tready        (trig_tready));                  

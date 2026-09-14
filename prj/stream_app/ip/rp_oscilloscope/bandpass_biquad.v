@@ -1,27 +1,41 @@
 `timescale 1ns / 1ps
 
-// Pasabanda para deteccion de arena, insertado despues de calibracion y
-// antes de decimar - misma señal que ve hoy el software (analisis/placa/
-// en el repo Sand Monitoring).
-//
-// Estructura: biquad Direct Form I (b0,b1,b2,a1,a2 - 5 coeficientes,
+// Una seccion de biquad Direct Form I (b0,b1,b2,a1,a2 - 5 coeficientes,
 // historia de 2 muestras de entrada y 2 de salida). Se eligio Direct
 // Form I y no Direct Form II Transposed porque en punto fijo sus
 // registros de historia tienen rango acotado (muestras de entrada/salida
 // reales, no un estado interno que puede crecer sin límite) - ver
 // "Estudio del filtro existente" en el README para el detalle completo.
 //
-// Etapa 4b (pasabajos de juguete): coeficientes de un pasabajos
-// Butterworth orden 2 real, formula estandar RBJ Audio EQ Cookbook
-// (facil de verificar contra cualquier referencia), frecuencia de corte
-// normalizada f0/fs=0.05, Q=1/sqrt(2). Reemplaza los coeficientes
-// triviales de la Etapa 4a (b0=1, resto 0) - esa validacion ya quedo
-// documentada en el README/git, no hace falta mantenerla en paralelo.
-// Los coeficientes siguen hardcodeados como localparam, sin registro AXI
-// para cambiarlos en caliente - eso se agrega mas adelante si hace falta
-// ajustar el filtro sin recompilar.
+// Coeficientes como PARAMETROS (no hardcodeados) desde la Etapa 4c: el
+// pasabanda real necesita 2 secciones en cascada (`butter(orden=2,
+// btype="bandpass")` de scipy da 2 secciones SOS, no 1 - un pasabanda de
+// orden N tiene 2N polos = N biquads), cada una con sus propios
+// coeficientes - ver bandpass_filter.v, que instancia 2 de estos.
+//
+// Ancho de coeficientes tambien parametrizable: la Etapa 4c encontro que
+// 18 bits (usado en las Etapas 4a/4b) NO alcanza para este filtro -
+// midiendo contra el diseño ideal con scipy, 18 bits da hasta 9.9dB de
+// error y en algunos redondeos queda INESTABLE (polos fuera del circulo
+// unidad). Motivo: la banda de interes (50-400kHz) es una fraccion muy
+// chica del Nyquist a 125MHz (Nyquist=62.5MHz), asi que los polos del
+// filtro quedan muy pegados al circulo unidad y hace falta mucha
+// precision para representarlos bien. 25 bits con 20 fraccionarios
+// (COEFF_BITS=25, FRAC_BITS=20 por defecto) da <0.05dB de error contra
+// el diseño ideal y encaja justo en el puerto ancho del multiplicador
+// del DSP48E1 (25x18 bits).
+//
+// Sin registro AXI para cambiar coeficientes en caliente todavia - eso
+// se agrega mas adelante si hace falta ajustar el filtro sin recompilar.
 module bandpass_biquad #(
-  parameter S_AXIS_DATA_BITS = 16
+  parameter S_AXIS_DATA_BITS = 16,
+  parameter COEFF_BITS       = 25,
+  parameter FRAC_BITS        = 20,
+  parameter signed [COEFF_BITS-1:0] COEFF_B0 = 0,
+  parameter signed [COEFF_BITS-1:0] COEFF_B1 = 0,
+  parameter signed [COEFF_BITS-1:0] COEFF_B2 = 0,
+  parameter signed [COEFF_BITS-1:0] COEFF_A1 = 0,
+  parameter signed [COEFF_BITS-1:0] COEFF_A2 = 0
 )(
   input  wire                             clk,
   input  wire                             rst_n,
@@ -34,18 +48,6 @@ module bandpass_biquad #(
   output wire                             m_axis_tvalid,
   input  wire                             m_axis_tready
 );
-
-////////////////////////////////////////////////////////////////////////////
-// Coeficientes - formato Q1.16 con signo, 18 bits (rango +-2, resolucion
-// 2^-16). Etapa 4a: b0 = 1.0 exacto, resto en 0 (pasamanos matematico).
-////////////////////////////////////////////////////////////////////////////
-localparam integer FRAC_BITS = 16;
-localparam integer COEFF_BITS = 18;
-localparam signed [COEFF_BITS-1:0] COEFF_B0 = 18'sd1316;     // 0.02008337
-localparam signed [COEFF_BITS-1:0] COEFF_B1 = 18'sd2632;     // 0.04016673
-localparam signed [COEFF_BITS-1:0] COEFF_B2 = 18'sd1316;     // 0.02008337
-localparam signed [COEFF_BITS-1:0] COEFF_A1 = -18'sd102303;  // -1.56101808
-localparam signed [COEFF_BITS-1:0] COEFF_A2 = 18'sd42032;    // 0.64135154
 
 wire signed [S_AXIS_DATA_BITS-1:0] din = s_axis_tdata;
 
@@ -85,8 +87,17 @@ wire signed [PROD_BITS-1:0] prod_a2 = y2 * COEFF_A2;
 localparam integer ACC_BITS = PROD_BITS + 3;
 wire signed [ACC_BITS-1:0] acc = prod_b0 + prod_b1 + prod_b2 - prod_a1 - prod_a2;
 
-// reescalar (Q1.16 -> entero) y saturar al ancho de salida
-wire signed [ACC_BITS-FRAC_BITS-1:0] acc_scaled = acc >>> FRAC_BITS;
+// reescalar (Qm.FRAC_BITS -> entero) y saturar al ancho de salida.
+// Redondeo al mas cercano (sumar medio LSB antes de correr los bits),
+// NO truncar - probado que truncar (siempre hacia -infinito) genera un
+// sesgo de DC sistematico que, realimentado por los polos del filtro
+// (muy cerca del circulo unidad), se acumula y satura la salida en
+// corridas largas incluso con una señal de entrada perfectamente
+// centrada en 0 (confirmado con una simulacion de 600k+ muestras a baja
+// frecuencia). El redondeo no elimina el limit-cycle de punto fijo del
+// todo (residual chico, ver README) pero evita el sesgo sistematico.
+localparam signed [ACC_BITS-1:0] ROUND_BIAS = {{(ACC_BITS-FRAC_BITS){1'b0}}, 1'b1, {(FRAC_BITS-1){1'b0}}};
+wire signed [ACC_BITS-FRAC_BITS-1:0] acc_scaled = (acc + ROUND_BIAS) >>> FRAC_BITS;
 localparam signed [S_AXIS_DATA_BITS-1:0] SAT_MAX = {1'b0, {(S_AXIS_DATA_BITS-1){1'b1}}};
 localparam signed [S_AXIS_DATA_BITS-1:0] SAT_MIN = {1'b1, {(S_AXIS_DATA_BITS-1){1'b0}}};
 

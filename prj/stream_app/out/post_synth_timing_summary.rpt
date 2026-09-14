@@ -1,7 +1,7 @@
 Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 ------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
-| Date         : Mon Sep 14 14:24:16 2026
+| Date         : Mon Sep 14 15:07:50 2026
 | Host         : facu-edge running 64-bit Ubuntu 24.04.4 LTS
 | Command      : report_timing_summary -file out/post_synth_timing_summary.rpt
 | Design       : red_pitaya_top
@@ -128,7 +128,7 @@ Table of Contents
 
     WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
     -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
-     -5.106     -997.719                    383                30559       -6.259     -182.443                     50                30511        0.845        0.000                       0                 13200  
+     -8.128    -1576.428                    439                30995       -6.259     -182.443                     50                30947        0.845        0.000                       0                 13430  
 
 
 Timing constraints are not met.
@@ -178,7 +178,7 @@ clk_fpga_2                                  11.024        0.000                 
 clk_fpga_3                                                                                                                                                                               2.845        0.000                       0                     1  
 daisy_clk                                    5.518        0.000                      0                   11        0.144        0.000                      0                   11        3.500        0.000                       0                    14  
 system_wrapper_i/clk_gen/inst/clk_in1                                                                                                                                                    2.000        0.000                       0                     1  
-  clk_125_system_clk_gen_0                  -5.106     -992.108                    365                23213        0.007        0.000                      0                23213        2.750        0.000                       0                  9992  
+  clk_125_system_clk_gen_0                  -8.128    -1570.817                    421                23649        0.007        0.000                      0                23649        2.750        0.000                       0                 10222  
   clk_200_system_clk_gen_0                  -0.344       -5.611                     18                 2521        0.007        0.000                      0                 2521        1.020        0.000                       0                  1259  
   clk_333_system_clk_gen_0                                                                                                                                                               0.845        0.000                       0                     2  
   clk_62_5_system_clk_gen_0                                                                                                                                                             13.845        0.000                       0                     2  
@@ -850,7 +850,7 @@ High Pulse Width  Slow    MMCME2_ADV/CLKIN1  n/a            2.000         4.000 
 From Clock:  clk_125_system_clk_gen_0
   To Clock:  clk_125_system_clk_gen_0
 
-Setup :          365  Failing Endpoints,  Worst Slack       -5.106ns,  Total Violation     -992.108ns
+Setup :          421  Failing Endpoints,  Worst Slack       -8.128ns,  Total Violation    -1570.817ns
 Hold  :            0  Failing Endpoints,  Worst Slack        0.007ns,  Total Violation        0.000ns
 PW    :            0  Failing Endpoints,  Worst Slack        2.750ns,  Total Violation        0.000ns
 ---------------------------------------------------------------------------------------------------
@@ -858,16 +858,16 @@ PW    :            0  Failing Endpoints,  Worst Slack        2.750ns,  Total Vio
 
 Max Delay Paths
 --------------------------------------------------------------------------------------
-Slack (VIOLATED) :        -5.106ns  (required time - arrival time)
-  Source:                 system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_b2/CLK
+Slack (VIOLATED) :        -8.128ns  (required time - arrival time)
+  Source:                 system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_b2/CLK
                             (rising edge-triggered cell DSP48E1 clocked by clk_125_system_clk_gen_0  {rise@0.000ns fall@4.000ns period=8.000ns})
-  Destination:            system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_a1/A[0]
+  Destination:            system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_a1/B[15]
                             (rising edge-triggered cell DSP48E1 clocked by clk_125_system_clk_gen_0  {rise@0.000ns fall@4.000ns period=8.000ns})
   Path Group:             clk_125_system_clk_gen_0
   Path Type:              Setup (Max at Slow Process Corner)
   Requirement:            8.000ns  (clk_125_system_clk_gen_0 rise@8.000ns - clk_125_system_clk_gen_0 rise@0.000ns)
-  Data Path Delay:        12.529ns  (logic 9.958ns (79.477%)  route 2.571ns (20.523%))
-  Logic Levels:           6  (CARRY4=1 DSP48E1=3 LUT2=1 LUT3=1)
+  Data Path Delay:        15.463ns  (logic 11.132ns (71.989%)  route 4.331ns (28.011%))
+  Logic Levels:           13  (CARRY4=7 DSP48E1=2 LUT1=2 LUT3=2)
   Clock Path Skew:        -0.145ns (DCD - SCD + CPR)
     Destination Clock Delay (DCD):    -1.863ns = ( 6.137 - 8.000 ) 
     Source Clock Delay      (SCD):    -1.249ns
@@ -887,29 +887,48 @@ Slack (VIOLATED) :        -5.106ns  (required time - arrival time)
                                                      -4.957    -2.950 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.800    -2.150    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.101    -2.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.800    -1.249    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/clk
-                         DSP48E1                                      r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_b2/CLK
+                         net (fo=10264, unplaced)     0.800    -1.249    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/clk
+                         DSP48E1                                      r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_b2/CLK
   -------------------------------------------------------------------    -------------------
                          DSP48E1 (Prop_dsp48e1_CLK_PCOUT[47])
-                                                      4.206     2.957 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_b2/PCOUT[47]
-                         net (fo=1, unplaced)         0.000     2.957    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_b2_n_106
+                                                      4.206     2.957 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_b2/PCOUT[47]
+                         net (fo=1, unplaced)         0.000     2.957    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_b2_n_106
                          DSP48E1 (Prop_dsp48e1_PCIN[47]_PCOUT[47])
-                                                      1.713     4.670 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/acc/PCOUT[47]
-                         net (fo=1, unplaced)         0.000     4.670    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/acc_n_106
-                         DSP48E1 (Prop_dsp48e1_PCIN[47]_PCOUT[47])
-                                                      1.713     6.383 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/acc__0/PCOUT[47]
-                         net (fo=1, unplaced)         0.000     6.383    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/acc__0_n_106
-                         DSP48E1 (Prop_dsp48e1_PCIN[47]_P[32])
-                                                      1.518     7.901 f  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/acc__1/P[32]
-                         net (fo=4, unplaced)         0.800     8.700    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/acc_scaled[16]
-                         LUT2 (Prop_lut2_I0_O)        0.150     8.850 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/m_axis_tdata[15]_i_6/O
-                         net (fo=1, unplaced)         0.000     8.850    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/m_axis_tdata[15]_i_6_n_0
+                                                      1.713     4.670 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/acc_scaled0/PCOUT[47]
+                         net (fo=1, unplaced)         0.000     4.670    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/acc_scaled0_n_106
+                         DSP48E1 (Prop_dsp48e1_PCIN[47]_P[19])
+                                                      1.518     6.188 f  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/acc_scaled0__0/P[19]
+                         net (fo=2, unplaced)         0.800     6.987    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/acc_scaled0__0_n_86
+                         LUT1 (Prop_lut1_I0_O)        0.124     7.111 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata[3]_i_35/O
+                         net (fo=1, unplaced)         0.000     7.111    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata[3]_i_35_n_0
+                         CARRY4 (Prop_carry4_S[1]_CO[3])
+                                                      0.550     7.661 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[3]_i_21/CO[3]
+                         net (fo=1, unplaced)         0.000     7.661    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[3]_i_21_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.114     7.775 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[7]_i_11/CO[3]
+                         net (fo=1, unplaced)         0.000     7.775    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[7]_i_11_n_0
+                         CARRY4 (Prop_carry4_CI_O[2])
+                                                      0.256     8.031 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[11]_i_11/O[2]
+                         net (fo=3, unplaced)         0.923     8.954    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/PCIN[28]
+                         LUT3 (Prop_lut3_I1_O)        0.301     9.255 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata[11]_i_5/O
+                         net (fo=1, unplaced)         0.639     9.894    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata[11]_i_5_n_0
                          CARRY4 (Prop_carry4_DI[1]_CO[3])
-                                                      0.534     9.384 f  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/m_axis_tdata_reg[15]_i_3/CO[3]
-                         net (fo=16, unplaced)        0.972    10.356    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/y_next2
-                         LUT3 (Prop_lut3_I1_O)        0.124    10.480 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/m_axis_tdata[0]_i_1/O
-                         net (fo=3, unplaced)         0.800    11.280    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/B[0]
-                         DSP48E1                                      r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_a1/A[0]
+                                                      0.507    10.401 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[11]_i_2/CO[3]
+                         net (fo=1, unplaced)         0.000    10.401    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[11]_i_2_n_0
+                         CARRY4 (Prop_carry4_CI_O[3])
+                                                      0.329    10.730 f  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[15]_i_3/O[3]
+                         net (fo=5, unplaced)         0.646    11.376    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/acc_scaled[15]
+                         LUT1 (Prop_lut1_I0_O)        0.301    11.677 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata[15]_i_29/O
+                         net (fo=1, unplaced)         0.000    11.677    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata[15]_i_29_n_0
+                         CARRY4 (Prop_carry4_DI[0]_CO[3])
+                                                      0.553    12.230 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[15]_i_14/CO[3]
+                         net (fo=1, unplaced)         0.000    12.230    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[15]_i_14_n_0
+                         CARRY4 (Prop_carry4_CI_CO[0])
+                                                      0.293    12.523 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata_reg[15]_i_4/CO[0]
+                         net (fo=16, unplaced)        0.524    13.047    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/y_next2
+                         LUT3 (Prop_lut3_I1_O)        0.367    13.414 r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/m_axis_tdata[15]_i_2/O
+                         net (fo=7, unplaced)         0.800    14.214    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/y_next[15]
+                         DSP48E1                                      r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_a1/B[15]
   -------------------------------------------------------------------    -------------------
 
                          (clock clk_125_system_clk_gen_0 rise edge)
@@ -920,17 +939,17 @@ Slack (VIOLATED) :        -5.106ns  (required time - arrival time)
                                                      -5.231     4.631 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.760     5.391    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.091     5.482 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.655     6.137    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/clk
-                         DSP48E1                                      r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_a1/CLK
+                         net (fo=10264, unplaced)     0.655     6.137    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/clk
+                         DSP48E1                                      r  system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_a1/CLK
                          clock pessimism              0.469     6.606    
                          clock uncertainty           -0.069     6.536    
-                         DSP48E1 (Setup_dsp48e1_CLK_A[0])
-                                                     -0.362     6.174    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_biquad/prod_a1
+                         DSP48E1 (Setup_dsp48e1_CLK_B[15])
+                                                     -0.450     6.086    system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_bandpass_filter/U_seccion0/prod_a1
   -------------------------------------------------------------------
-                         required time                          6.174    
-                         arrival time                         -11.280    
+                         required time                          6.086    
+                         arrival time                         -14.214    
   -------------------------------------------------------------------
-                         slack                                 -5.106    
+                         slack                                 -8.128    
 
 
 
@@ -963,7 +982,7 @@ Slack (MET) :             0.007ns  (arrival time - required time)
                                                      -1.695    -0.950 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.337    -0.612    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.026    -0.586 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.210    -0.377    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/dest_clk
+                         net (fo=10264, unplaced)     0.210    -0.377    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/dest_clk
                          FDPE                                         r  system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/arststages_ff_reg[0]/C
   -------------------------------------------------------------------    -------------------
                          FDPE (Prop_fdpe_C_Q)         0.141    -0.236 r  system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/arststages_ff_reg[0]/Q
@@ -979,7 +998,7 @@ Slack (MET) :             0.007ns  (arrival time - required time)
                                                      -2.324    -1.433 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.355    -1.078    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.029    -1.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.355    -0.695    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/dest_clk
+                         net (fo=10264, unplaced)     0.355    -0.695    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/dest_clk
                          FDPE                                         r  system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/arststages_ff_reg[1]/C
                          clock pessimism              0.463    -0.232    
                          FDPE (Hold_fdpe_C_D)         0.070    -0.162    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.rst_wr_reg2_inst/arststages_ff_reg[1]
@@ -1003,8 +1022,8 @@ Sources:            { system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0 }
 Check Type        Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location  Pin
 Min Period        n/a     XADC/DCLK           n/a            4.000         8.000       4.000                system_wrapper_i/xadc/inst/AXI_XADC_CORE_I/XADC_INST/DCLK
 Max Period        n/a     MMCME2_ADV/CLKOUT0  n/a            213.360       8.000       205.360              system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
-Low Pulse Width   Slow    RAMD32/CLK          n/a            1.250         4.000       2.750                system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gdm.dm_gen.dm/RAM_reg_0_15_0_5/RAMA/CLK
-High Pulse Width  Slow    RAMD32/CLK          n/a            1.250         4.000       2.750                system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[0].U_osc2/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gdm.dm_gen.dm/RAM_reg_0_15_0_5/RAMA/CLK
+Low Pulse Width   Slow    RAMD32/CLK          n/a            1.250         4.000       2.750                system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[1].U_osc2/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gdm.dm_gen.dm/RAM_reg_0_15_0_5/RAMA/CLK
+High Pulse Width  Slow    RAMD32/CLK          n/a            1.250         4.000       2.750                system_wrapper_i/rp_oscilloscope/inst/acq_ch_gen[1].U_osc2/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gdm.dm_gen.dm/RAM_reg_0_15_0_5/RAMA/CLK
 
 
 
@@ -1155,8 +1174,8 @@ Sources:            { system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT1 }
 Check Type        Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location  Pin
 Min Period        n/a     RAMB18E1/CLKARDCLK  n/a            2.576         4.000       1.424                system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_fifo_axi_data/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/prim_noinit.ram/DEVICE_7SERIES.NO_BMM_INFO.SDP.SIMPLE_PRIM18.ram/CLKARDCLK
 Max Period        n/a     MMCME2_ADV/CLKOUT1  n/a            213.360       4.000       209.360              system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT1
-Low Pulse Width   Slow    SRL16E/CLK          n/a            0.980         2.000       1.020                system_wrapper_i/rst_gen2/U0/EXT_LPF/POR_SRL_I/CLK
-High Pulse Width  Slow    SRL16E/CLK          n/a            0.980         2.000       1.020                system_wrapper_i/rst_gen2/U0/EXT_LPF/POR_SRL_I/CLK
+Low Pulse Width   Slow    SRL16E/CLK          n/a            0.980         2.000       1.020                system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_fifo_axi_data/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/SAFETY_CKT_GEN.RSTA_SHFT_REG_reg[3]_srl3/CLK
+High Pulse Width  Slow    SRL16E/CLK          n/a            0.980         2.000       1.020                system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_fifo_axi_data/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/inst_blk_mem_gen/gnbram.gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/SAFETY_CKT_GEN.RSTA_SHFT_REG_reg[3]_srl3/CLK
 
 
 
@@ -1270,7 +1289,7 @@ Slack (MET) :             9.470ns  (required time - arrival time)
                                                      -2.324    -1.433 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.355    -1.078    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.029    -1.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.355    -0.695    system_wrapper_i/rst_gen/U0/slowest_sync_clk
+                         net (fo=10264, unplaced)     0.355    -0.695    system_wrapper_i/rst_gen/U0/slowest_sync_clk
                          FDRE                                         r  system_wrapper_i/rst_gen/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_fdre_C_Q)         0.175    -0.520 f  system_wrapper_i/rst_gen/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N/Q
@@ -1339,7 +1358,7 @@ Slack (VIOLATED) :        -6.259ns  (arrival time - required time)
                                                      -5.231    -3.369 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.760    -2.609    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.091    -2.518 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.655    -1.863    system_wrapper_i/rp_dac/inst/clk
+                         net (fo=10264, unplaced)     0.655    -1.863    system_wrapper_i/rp_dac/inst/clk
                          FDRE                                         r  system_wrapper_i/rp_dac/inst/dac_a_r_reg[15]/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_fdre_C_Q)         0.367    -1.496 r  system_wrapper_i/rp_dac/inst/dac_a_r_reg[15]/Q
@@ -1423,7 +1442,7 @@ Slack (MET) :             0.779ns  (required time - arrival time)
                                                      -5.231     4.631 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.760     5.391    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.091     5.482 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.760     6.242    clk_125
+                         net (fo=10264, unplaced)     0.760     6.242    clk_125
     ILOGIC_X0Y33         FDRE                                         r  adc_dat_ch1_r_reg[5]/C
                          clock pessimism              0.000     6.242    
                          clock uncertainty           -0.166     6.075    
@@ -1480,7 +1499,7 @@ Slack (MET) :             4.371ns  (arrival time - required time)
                                                      -2.324    -1.433 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.355    -1.078    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.029    -1.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.355    -0.695    clk_125
+                         net (fo=10264, unplaced)     0.355    -0.695    clk_125
     ILOGIC_X0Y1          FDRE                                         r  adc_dat_ch2_r_reg[1]/C
                          clock pessimism              0.000    -0.695    
                          clock uncertainty            0.166    -0.528    
@@ -1553,7 +1572,7 @@ Slack (MET) :             1.736ns  (required time - arrival time)
                                                      -5.231     4.631 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.760     5.391    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.091     5.482 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.655     6.137    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/s_axis_aclk
+                         net (fo=10264, unplaced)     0.655     6.137    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/s_axis_aclk
                          SRL16E                                       r  system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/idle_rst_saxi_r2_reg_srl2/CLK
                          clock pessimism              0.419     6.556    
                          clock uncertainty           -0.189     6.366    
@@ -1616,7 +1635,7 @@ Slack (VIOLATED) :        -0.052ns  (arrival time - required time)
                                                      -2.324    -1.433 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.355    -1.078    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.029    -1.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.355    -0.695    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/s_axis_aclk
+                         net (fo=10264, unplaced)     0.355    -0.695    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/s_axis_aclk
                          FDRE                                         r  system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/fifo_full_r_reg/C
                          clock pessimism              0.484    -0.211    
                          clock uncertainty            0.189    -0.022    
@@ -1671,7 +1690,7 @@ Slack (MET) :             2.591ns  (required time - arrival time)
                                                      -4.957    -2.950 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.800    -2.150    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.101    -2.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.800    -1.249    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/s_axis_aclk
+                         net (fo=10264, unplaced)     0.800    -1.249    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/s_axis_aclk
                          FDRE                                         r  system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/fifo_re_rin_reg/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_fdre_C_Q)         0.456    -0.793 r  system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/fifo_re_rin_reg/Q
@@ -1733,7 +1752,7 @@ Slack (VIOLATED) :        -0.056ns  (arrival time - required time)
                                                      -1.695    -0.950 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.337    -0.612    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.026    -0.586 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.210    -0.377    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/s_axis_aclk
+                         net (fo=10264, unplaced)     0.210    -0.377    system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/s_axis_aclk
                          FDRE                                         r  system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/fifo_re_rin_reg/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_fdre_C_Q)         0.141    -0.236 r  system_wrapper_i/rp_dac/inst/U_dac1/U_dma_mm2s/U_dma_mm2s_ctrl/fifo_re_rin_reg/Q
@@ -1805,7 +1824,7 @@ Slack (MET) :             5.037ns  (required time - arrival time)
                                                      -4.957    -2.950 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.800    -2.150    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.101    -2.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.800    -1.249    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/WR_CLK
+                         net (fo=10264, unplaced)     0.800    -1.249    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/WR_CLK
                          FDRE                                         r  system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gcc_rst.sckt_wr_rst_cc_reg[1]/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_fdre_C_Q)         0.456    -0.793 f  system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gcc_rst.sckt_wr_rst_cc_reg[1]/Q
@@ -1823,7 +1842,7 @@ Slack (MET) :             5.037ns  (required time - arrival time)
                                                      -5.231     4.631 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.760     5.391    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.091     5.482 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.655     6.137    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.gr1_int.rfwft/RD_CLK
+                         net (fo=10264, unplaced)     0.655     6.137    system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.gr1_int.rfwft/RD_CLK
                          FDCE                                         r  system_wrapper_i/axi_interconnect_0/m00_couplers/auto_pc/inst/gen_axi4_axi3.axi3_conv_inst/USE_READ.USE_SPLIT_R.read_addr_inst/USE_R_CHANNEL.cmd_queue/inst/fifo_gen_inst/inst_fifo_gen/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.gl0.rd/gr1.gr1_int.rfwft/gpregsm1.curr_fwft_state_reg[0]/C
                          clock pessimism              0.469     6.606    
                          clock uncertainty           -0.069     6.536    
@@ -1865,7 +1884,7 @@ Slack (MET) :             0.298ns  (arrival time - required time)
                                                      -1.695    -0.950 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.337    -0.612    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.026    -0.586 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.210    -0.377    system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.rst_rd_reg2_inst/dest_clk
+                         net (fo=10264, unplaced)     0.210    -0.377    system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.rst_rd_reg2_inst/dest_clk
                          FDPE                                         r  system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.rst_rd_reg2_inst/arststages_ff_reg[1]/C
   -------------------------------------------------------------------    -------------------
                          FDPE (Prop_fdpe_C_Q)         0.141    -0.236 f  system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.rst_rd_reg2_inst/arststages_ff_reg[1]/Q
@@ -1881,7 +1900,7 @@ Slack (MET) :             0.298ns  (arrival time - required time)
                                                      -2.324    -1.433 r  system_wrapper_i/clk_gen/inst/mmcm_adv_inst/CLKOUT0
                          net (fo=1, unplaced)         0.355    -1.078    system_wrapper_i/clk_gen/inst/clk_125_system_clk_gen_0
                          BUFG (Prop_bufg_I_O)         0.029    -1.049 r  system_wrapper_i/clk_gen/inst/clkout1_buf/O
-                         net (fo=10032, unplaced)     0.355    -0.695    system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/RD_CLK
+                         net (fo=10264, unplaced)     0.355    -0.695    system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/RD_CLK
                          FDCE                                         r  system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.wr_rst_rd_ext_reg[0]/C
                          clock pessimism              0.463    -0.232    
                          FDCE (Remov_fdce_C_CLR)     -0.147    -0.379    system_wrapper_i/rp_gpio/inst/gpio_in_top/U_dma_s2mm/U_dma_s2mm_ctrl/U_dma_s2mm_data_ctrl/U_fifo_axi_req/U0/inst_fifo_gen/gconvfifo.rf/grf.rf/rstblk/ngwrdrst.grst.g7serrst.gnsckt_wrst.gic_rst.wr_rst_rd_ext_reg[0]

@@ -13,6 +13,16 @@ adelante). Para el "por qué" de cada decisión y el historial del plan, ver
   ```
   source /tools/Xilinx/Vivado/2020.1/settings64.sh
   ```
+- Para generar/regenerar coeficientes de filtro (scripts en
+  `tbn/vectores/*.py`, usan `scipy`/`numpy`): hay un venv del repo en
+  `.venv/` (no versionado, gitignoreado). Si no existe todavía:
+  ```
+  python3 -m venv .venv
+  .venv/bin/pip install numpy scipy
+  ```
+  Correr los scripts con `.venv/bin/python tbn/vectores/generar_etapaXX.py`
+  (el sistema no tiene `pip` utilizable directo — Debian/Ubuntu moderno
+  bloquea `pip install` global, PEP 668 — de ahí el venv).
 
 ## Comandos básicos
 
@@ -90,21 +100,30 @@ reemplazados) y el test que la validaba (`tb_bandpass_biquad_unity.sv`,
 resultado sigue documentado en el README y en el historial de git
 (commit de la Etapa 4a) si hace falta revisarlo.
 
-**Simulación del biquad con coeficientes reales de un pasabajos
-(Etapa 4b):**
+**Etapa 4b (pasabajos de juguete)** tampoco tiene script propio ya —
+superada por la Etapa 4c (coeficientes reemplazados otra vez, y el
+módulo pasó a tomar coeficientes como parámetro en vez de hardcodeados).
+El test (`tb_bandpass_biquad_lowpass.sv`, 200/200 checks) se borró por
+el mismo motivo que el de la 4a. Resultado documentado en el README y
+en el commit de esa etapa.
+
+**Simulación del pasabanda real (Etapa 4c, el filtro final: 2 secciones
+biquad en cascada, después del decimador):**
 ```
-./etapa4b_sim_bandpass.sh
+./etapa4c_sim_bandpass.sh
 ```
 Mismo estilo (segundos, sin GUI). Compara contra vectores golden
-precalculados (`tbn/vectores/etapa4b_input.mem` /
-`etapa4b_expected.mem`) generados con un modelo en Python que replica
-EXACTO la misma aritmética de punto fijo del RTL (no es una comparación
-contra el filtro ideal en punto flotante — es bit exacto contra "lo que
-este punto fijo debería dar"). La latencia real del pipeline es
-**1 ciclo** (todo el producto-acumulado-saturado es combinacional, un
-solo registro de historia a la entrada y uno a la salida) — si se toca
-el RTL y hay que regenerar los vectores, el script Python usado para
-generarlos está descrito en el README (sección de la Etapa 4b).
+precalculados (`tbn/vectores/etapa4c_input.mem` / `etapa4c_expected.mem`,
+generados por `tbn/vectores/generar_etapa4c.py` — necesita el venv del
+repo, ver arriba) con un modelo en Python que replica EXACTO la misma
+aritmética de punto fijo del RTL (mismo redondeo, misma saturación) — no
+es una comparación contra el filtro ideal en punto flotante. Si se toca
+el RTL de `bandpass_biquad.v`/`bandpass_filter.v` (coeficientes, ancho de
+bits, o la forma de redondear/saturar), hay que volver a correr
+`generar_etapa4c.py` ANTES de re-simular, o los vectores quedan
+desactualizados sin que nada avise. La latencia real de la cascada es
+**3 ciclos** (no 1+1=2 — ver README, sección de la Etapa 4c, para el
+porqué).
 
 ## Verificar que un build salió bien
 
