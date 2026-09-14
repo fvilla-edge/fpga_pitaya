@@ -111,6 +111,19 @@ module scope_cfg
    output wire signed [       25-1:0]  cfg_bp_coeff_a1_s1_o,
    output wire signed [       25-1:0]  cfg_bp_coeff_a2_s1_o,
 
+   // Etapa 5 (RedPitaya-FPGA): area/kurtosis por ventana - tamano de
+   // ventana configurable (compartido entre canales) y resultados de la
+   // ultima ventana completa (solo canal 0, mismo criterio que diag1-5)
+   output wire [              32-1:0]  cfg_area_window_samples_o,
+   input  wire [              32-1:0]  area_window_count_i,
+   input  wire [              32-1:0]  area_sum_abs_lo_i,
+   input  wire [              32-1:0]  area_sum_abs_hi_i,
+   input  wire [              32-1:0]  area_sum_x2_lo_i,
+   input  wire [              32-1:0]  area_sum_x2_hi_i,
+   input  wire [              32-1:0]  area_sum_x4_lo_i,
+   input  wire [              32-1:0]  area_sum_x4_mid_i,
+   input  wire [              32-1:0]  area_sum_x4_hi_i,
+
    output wire [            4*32-1:0]  cfg_dma_dst_addr1_o ,
    output wire [            4*32-1:0]  cfg_dma_dst_addr2_o ,
 
@@ -236,6 +249,17 @@ localparam BP_COEFF_B2_S1           = 12'h21C;
 localparam BP_COEFF_A1_S1           = 12'h220;
 localparam BP_COEFF_A2_S1           = 12'h224;
 
+// Etapa 5 (RedPitaya-FPGA): area/kurtosis por ventana
+localparam AREA_WINDOW_SAMPLES       = 12'h228; // R/W - muestras por ventana
+localparam AREA_WINDOW_COUNT         = 12'h22C; // R   - se incrementa por ventana completa
+localparam AREA_SUM_ABS_LO           = 12'h230; // R
+localparam AREA_SUM_ABS_HI           = 12'h234; // R
+localparam AREA_SUM_X2_LO            = 12'h238; // R
+localparam AREA_SUM_X2_HI            = 12'h23C; // R
+localparam AREA_SUM_X4_LO            = 12'h240; // R
+localparam AREA_SUM_X4_MID           = 12'h244; // R
+localparam AREA_SUM_X4_HI            = 12'h248; // R
+
 localparam STATUS_REG               = 12'h100;   // status of FPGA clock
 localparam CLKSEL_REG               = 16'h1000;  // FPGA mode
 
@@ -288,6 +312,10 @@ reg signed [25-1:0]           cfg_bp_coeff_b1_s1;
 reg signed [25-1:0]           cfg_bp_coeff_b2_s1;
 reg signed [25-1:0]           cfg_bp_coeff_a1_s1;
 reg signed [25-1:0]           cfg_bp_coeff_a2_s1;
+
+// Etapa 5 (RedPitaya-FPGA): muestras por ventana de area/kurtosis -
+// default = ventana real de 50ms a fs=3906250Hz (decimacion 32)
+reg [32-1:0]                  cfg_area_window_samples;
 
 reg  [ 4-1: 0]              event_op_reg;
 
@@ -451,6 +479,8 @@ begin
       cfg_bp_coeff_b2_s1      <= 25'sd1048576;
       cfg_bp_coeff_a1_s1      <= -25'sd1984139;
       cfg_bp_coeff_a2_s1      <= 25'sd943367;
+
+      cfg_area_window_samples <= 32'd195312;
    end else begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==EVENT_STS_ADDR)        )  event_op_reg            <= reg_wdat_adc[3:0]; else event_op_reg <= 4'h0;
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==EVENT_SEL_ADDR)        )  cfg_event_sel           <= reg_wdat_adc[3-1:0];
@@ -508,6 +538,8 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_A1_S1)        )  cfg_bp_coeff_a1_s1 <= reg_wdat_adc[25-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_A2_S1)        )  cfg_bp_coeff_a2_s1 <= reg_wdat_adc[25-1:0];
 
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==AREA_WINDOW_SAMPLES)   )  cfg_area_window_samples <= reg_wdat_adc[32-1:0];
+
    end
 end
 
@@ -550,6 +582,15 @@ begin
       BP_COEFF_B2_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_b2_s1};                        end
       BP_COEFF_A1_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_a1_s1};                        end
       BP_COEFF_A2_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_a2_s1};                        end
+      AREA_WINDOW_SAMPLES    : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = cfg_area_window_samples;                                    end
+      AREA_WINDOW_COUNT      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_window_count_i;                                        end
+      AREA_SUM_ABS_LO        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_abs_lo_i;                                          end
+      AREA_SUM_ABS_HI        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_abs_hi_i;                                          end
+      AREA_SUM_X2_LO         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x2_lo_i;                                           end
+      AREA_SUM_X2_HI         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x2_hi_i;                                           end
+      AREA_SUM_X4_LO         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x4_lo_i;                                           end
+      AREA_SUM_X4_MID        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x4_mid_i;                                          end
+      AREA_SUM_X4_HI         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x4_hi_i;                                           end
       STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , daisy_slave, pll_locked}; end
 
       CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[1*16-1:0*16]};    end
@@ -695,6 +736,8 @@ assign cfg_bp_coeff_b1_s1_o    = cfg_bp_coeff_b1_s1;
 assign cfg_bp_coeff_b2_s1_o    = cfg_bp_coeff_b2_s1;
 assign cfg_bp_coeff_a1_s1_o    = cfg_bp_coeff_a1_s1;
 assign cfg_bp_coeff_a2_s1_o    = cfg_bp_coeff_a2_s1;
+
+assign cfg_area_window_samples_o = cfg_area_window_samples;
 
 assign cfg_dma_dst_addr1_o     = cfg_dma_dst_addr1;
 assign cfg_dma_dst_addr2_o     = cfg_dma_dst_addr2;

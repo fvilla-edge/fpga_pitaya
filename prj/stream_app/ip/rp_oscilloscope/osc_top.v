@@ -64,6 +64,18 @@ module osc_top
   input  wire signed [              25-1:0]      cfg_bp_coeff_a1_s1_i    ,
   input  wire signed [              25-1:0]      cfg_bp_coeff_a2_s1_i    ,
 
+  // Etapa 5 (RedPitaya-FPGA): acumuladores de area/kurtosis por
+  // ventana (area_kurtosis_accum.v) sobre la señal ya filtrada
+  input  wire [              32-1:0]      cfg_area_window_samples_i,
+  output wire [              32-1:0]      area_window_count_o     ,
+  output wire [              32-1:0]      area_sum_abs_lo_o       ,
+  output wire [              32-1:0]      area_sum_abs_hi_o       ,
+  output wire [              32-1:0]      area_sum_x2_lo_o        ,
+  output wire [              32-1:0]      area_sum_x2_hi_o        ,
+  output wire [              32-1:0]      area_sum_x4_lo_o        ,
+  output wire [              32-1:0]      area_sum_x4_mid_o       ,
+  output wire [              32-1:0]      area_sum_x4_hi_o        ,
+
   input  wire [              32-1:0]      cfg_dma_dst_addr1_i ,
   input  wire [              32-1:0]      cfg_dma_dst_addr2_i ,
   input  wire [              32-1:0]      cfg_dma_buf_size_i      ,
@@ -134,6 +146,9 @@ wire                        calib_tvalid;
 wire                        calib_tready;
 
 wire [S_AXIS_DATA_BITS-1:0] bp_tdata;
+wire [39:0] area_sum_abs;
+wire [51:0] area_sum_x2;
+wire [83:0] area_sum_x4;
 wire                        bp_tvalid;
 wire                        bp_tready;
 
@@ -361,6 +376,33 @@ bandpass_filter #(
   .cfg_coeff_b2_s1 (cfg_bp_coeff_b2_s1_i),
   .cfg_coeff_a1_s1 (cfg_bp_coeff_a1_s1_i),
   .cfg_coeff_a2_s1 (cfg_bp_coeff_a2_s1_i));
+
+////////////////////////////////////////////////////////////
+// Name : Area/kurtosis por ventana - Etapa 5 (RedPitaya-FPGA)
+//
+// Sobre la señal YA filtrada (bp_tdata) - no toca el camino hacia
+// osc_trigger, es una rama en paralelo (tap), no altera nada existente
+////////////////////////////////////////////////////////////
+area_kurtosis_accum #(
+  .S_AXIS_DATA_BITS (S_AXIS_DATA_BITS))
+  U_area_kurtosis_accum(
+  .clk                (clk_adc),
+  .rst_n              (rstn_dec),
+  .s_axis_tdata       (bp_tdata),
+  .s_axis_tvalid      (bp_tvalid),
+  .cfg_window_samples (cfg_area_window_samples_i),
+  .sum_abs            (area_sum_abs),
+  .sum_x2             (area_sum_x2),
+  .sum_x4             (area_sum_x4),
+  .window_count       (area_window_count_o));
+
+assign area_sum_abs_lo_o  = area_sum_abs[31:0];
+assign area_sum_abs_hi_o  = {24'h0, area_sum_abs[39:32]};
+assign area_sum_x2_lo_o   = area_sum_x2[31:0];
+assign area_sum_x2_hi_o   = {12'h0, area_sum_x2[51:32]};
+assign area_sum_x4_lo_o   = area_sum_x4[31:0];
+assign area_sum_x4_mid_o  = area_sum_x4[63:32];
+assign area_sum_x4_hi_o   = {12'h0, area_sum_x4[83:64]};
 
 ////////////////////////////////////////////////////////////
 // Name : Trigger

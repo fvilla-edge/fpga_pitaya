@@ -399,10 +399,52 @@ el tracking exacto de crecimiento de bits por etapa (como hace
 canal (mínimo 5 multiplicadores por biquad si no se time-multiplexa;
 a 125 MSPS con margen de reloj interno podría compartirse menos DSP48
 corriendo a mayor frecuencia — no evaluado todavía).
-- [ ] **Etapa 5 (opcional, más ambiciosa) — Acumuladores de área/kurtosis
+- [x] **Etapa 5 (opcional, más ambiciosa) — Acumuladores de área/kurtosis
       en HW.** No solo el filtro: sumas de |x|, x² y x⁴ por ventana
       también son streameables (ver memoria del proyecto sec.173).
       Validar igual, en simulación, contra los mismos datos reales.
+      **Hecho (2026-09-14):**
+      - **Aproximación validada ANTES de escribir RTL:** el software
+        (`analisis/placa/area_kurtosis.py::_kurtosis_por_ventana`) resta
+        la media EXACTA de cada ventana — necesita ver la ventana
+        completa dos veces (dos pasadas), imposible para un acumulador
+        de una sola pasada en streaming. Un acumulador en HW tiene que
+        asumir media≈0 (razonable post-pasabanda: ganancia ideal en DC =
+        0 exacto). Validado con `tbn/vectores/validar_etapa5_aproximacion.py`
+        contra el archivo real de referencia del proyecto (primera vez
+        que se puede usar ese archivo de verdad para esto — el filtro
+        ahora vive después del decimador, mismo dominio que el
+        software): **100% de coincidencia de clasificación** (kurtosis
+        >=6) sobre 160 ventanas reales de 50ms, diferencia de kurtosis
+        <0.04% en el peor caso.
+      - **Módulo nuevo `area_kurtosis_accum.v`:** acumuladores de
+        `sum(|x|)`, `sum(x²)`, `sum(x⁴)` sobre la señal ya filtrada,
+        latcheados una vez por ventana completa (tamaño de ventana
+        configurable). Anchos dimensionados para el peor caso (señal a
+        fondo de escala) con ventanas de hasta 2²⁰ muestras: 40/52/84
+        bits respectivamente — `sum(x⁴)` sola necesita 3 registros de 32
+        bits. División final (`kurt = m4/m2²`) queda para el host, como
+        preveía el plan original.
+      - **Conectado como rama en paralelo** después de `bandpass_filter`
+        (no toca el camino hacia `osc_trigger`/adquisición/DMA).
+        Instanciado una vez por canal (mismo generate que el resto),
+        pero **solo se expone el canal 0 por registro** (mismo criterio
+        que los diagnósticos `DIAG_REG1-5` de la Etapa 2) — decisión de
+        alcance, no limitación de la arquitectura: agregar el canal 1
+        sería el mismo patrón, duplicado.
+      - **9 registros nuevos** (`0x228-0x248`):
+        `AREA_WINDOW_SAMPLES` (R/W, compartido entre canales, default
+        195312 = 50ms a fs=3906250Hz/decimación 32) +
+        `AREA_WINDOW_COUNT`/`AREA_SUM_{ABS,X2}_{LO,HI}`/
+        `AREA_SUM_X4_{LO,MID,HI}` (R, canal 0).
+      - Validado en simulación standalone (`etapa5_sim_area_kurtosis.sh`
+        + `tbn/tb_area_kurtosis_accum.sv`): 4/4 checks — 2 ventanas
+        chicas a mano, una con huecos de `tvalid=0` en el medio
+        (confirma que no cuentan como muestra), y una ventana de tamaño
+        REAL (195312 muestras) a fondo de escala (confirma que los
+        anchos no truncan en el caso real, no solo en el análisis a
+        mano). Rebuild completo del bitstream OK (`Bitgen Completed
+        Successfully`, DRC 0 errores, DSP48E1 38→43).
 - [x] **Etapa 6 — Coeficientes configurables por software**, igual que ya
       hace `osc_filter.v` (`cfg_coeff_*`, `cfg_bypass`) — para no
       recompilar el bitstream cada vez que se ajuste el filtro. **Hecho

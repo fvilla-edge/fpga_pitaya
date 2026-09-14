@@ -125,6 +125,24 @@ desactualizados sin que nada avise. La latencia real de la cascada es
 **3 ciclos** (no 1+1=2 — ver README, sección de la Etapa 4c, para el
 porqué).
 
+**Simulación de los acumuladores de área/kurtosis (Etapa 5):**
+```
+./etapa5_sim_area_kurtosis.sh
+```
+Mismo estilo (segundos, sin GUI). Prueba `area_kurtosis_accum.v` solo
+(ventanas chicas a mano + una ventana de tamaño real a fondo de escala,
+ver `tbn/tb_area_kurtosis_accum.sv`) — no depende del filtro ni del venv.
+
+**Validación (Python, no Verilog) de la aproximación de la Etapa 5**
+(asumir media≈0 en vez de restar la media exacta de la ventana):
+```
+.venv/bin/python prj/stream_app/tbn/vectores/validar_etapa5_aproximacion.py
+```
+Necesita el venv (numpy/scipy) Y el repo `Sand Monitoring` disponible en
+`~/Sand Monitoring` (importa `revisar.py` de ahí para leer el archivo
+real de referencia). Tarda unos minutos — filtra 8s de datos reales con
+un loop puro en Python (el IIR es secuencial, no vectorizable).
+
 ## Verificar que un build salió bien
 
 - El bitstream queda en `prj/stream_app/out/red_pitaya.bit`.

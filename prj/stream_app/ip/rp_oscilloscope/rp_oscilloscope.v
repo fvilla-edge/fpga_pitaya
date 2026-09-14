@@ -278,6 +278,20 @@ wire [4*32-1:0]             diag3;
 wire [4*32-1:0]             diag4;
 wire [4*32-1:0]             diag5;
 
+// Etapa 5 (RedPitaya-FPGA): area/kurtosis por ventana - solo canal 0
+// expuesto por registro (mismo criterio que diag1-5), tamano de
+// ventana COMPARTIDO entre canales (mismo criterio que los
+// coeficientes del filtro de la Etapa 6)
+wire [4*32-1:0]             area_window_count;
+wire [4*32-1:0]             area_sum_abs_lo;
+wire [4*32-1:0]             area_sum_abs_hi;
+wire [4*32-1:0]             area_sum_x2_lo;
+wire [4*32-1:0]             area_sum_x2_hi;
+wire [4*32-1:0]             area_sum_x4_lo;
+wire [4*32-1:0]             area_sum_x4_mid;
+wire [4*32-1:0]             area_sum_x4_hi;
+wire [32-1:0]               cfg_area_window_samples;
+
 wire [4-1:0]                ramp_en;
 wire [4-1:0]                loopback_gpio;
 wire [4-1:0]                loopback_dac;
@@ -482,6 +496,15 @@ scope_cfg #(
   .cfg_bp_coeff_b2_s1_o     (cfg_bp_coeff_b2_s1),
   .cfg_bp_coeff_a1_s1_o     (cfg_bp_coeff_a1_s1),
   .cfg_bp_coeff_a2_s1_o     (cfg_bp_coeff_a2_s1),
+  .cfg_area_window_samples_o (cfg_area_window_samples),
+  .area_window_count_i      (area_window_count[1*32-1:0*32]),
+  .area_sum_abs_lo_i        (area_sum_abs_lo[1*32-1:0*32]),
+  .area_sum_abs_hi_i        (area_sum_abs_hi[1*32-1:0*32]),
+  .area_sum_x2_lo_i         (area_sum_x2_lo[1*32-1:0*32]),
+  .area_sum_x2_hi_i         (area_sum_x2_hi[1*32-1:0*32]),
+  .area_sum_x4_lo_i         (area_sum_x4_lo[1*32-1:0*32]),
+  .area_sum_x4_mid_i        (area_sum_x4_mid[1*32-1:0*32]),
+  .area_sum_x4_hi_i         (area_sum_x4_hi[1*32-1:0*32]),
 
   .cfg_dma_dst_addr1_o      (cfg_dma_dst_addr1),
   .cfg_dma_dst_addr2_o      (cfg_dma_dst_addr2),
@@ -580,6 +603,15 @@ osc_top #(
   .cfg_bp_coeff_b2_s1_i     (cfg_bp_coeff_b2_s1),
   .cfg_bp_coeff_a1_s1_i     (cfg_bp_coeff_a1_s1),
   .cfg_bp_coeff_a2_s1_i     (cfg_bp_coeff_a2_s1),
+  .cfg_area_window_samples_i (cfg_area_window_samples),
+  .area_window_count_o      (area_window_count[(GV+1)*32-1:GV*32]),
+  .area_sum_abs_lo_o        (area_sum_abs_lo[(GV+1)*32-1:GV*32]),
+  .area_sum_abs_hi_o        (area_sum_abs_hi[(GV+1)*32-1:GV*32]),
+  .area_sum_x2_lo_o         (area_sum_x2_lo[(GV+1)*32-1:GV*32]),
+  .area_sum_x2_hi_o         (area_sum_x2_hi[(GV+1)*32-1:GV*32]),
+  .area_sum_x4_lo_o         (area_sum_x4_lo[(GV+1)*32-1:GV*32]),
+  .area_sum_x4_mid_o        (area_sum_x4_mid[(GV+1)*32-1:GV*32]),
+  .area_sum_x4_hi_o         (area_sum_x4_hi[(GV+1)*32-1:GV*32]),
 
   .cfg_dma_sts_o            (cfg_dma_sts[(GV+1)*32-1:GV*32]),
   .cfg_dma_dst_addr1_i      (cfg_dma_dst_addr1[(GV+1)*32-1:GV*32]),
