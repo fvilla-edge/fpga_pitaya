@@ -1,0 +1,8 @@
+# Generado por Vivado, regenerable corriendo el build de nuevo (no hace falta para el respaldo)
+**/.srcs/
+**/.Xil/
+**/.hbs/
+*.jou
+*.log
+*usage_statistics_webtalk*
+tight_setup_hold_pins.txt
