@@ -2,6 +2,12 @@
 **/.srcs/
 **/.Xil/
 **/.hbs/
+**/sim/
+**/xsim_diag5/
+**/xsim.dir/
+webtalk_pa.xml
+*.wdb
+vivado_pid*.str
 *.jou
 *.log
 *usage_statistics_webtalk*

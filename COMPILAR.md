@@ -44,11 +44,32 @@ funciona todavía en esta máquina**: requiere `xsct`/`hsi` (parte de
 Xilinx Vitis/SDK, no instalado). No hace falta para el trabajo del
 filtro, solo para armar la imagen de boot completa (kernel+rootfs+FSBL).
 
-**Simulación** (target existe en el Makefile, **no probado todavía** en
-este repo):
+**Simulación con `make sim` — NO USAR, no funciona en este repo.**
+Se probó (2026-09-14): el target abre la GUI de Vivado (no tiene
+`-mode batch`) y además no existe ningún `top_tb` para `stream_app`+Z10
+(solo para otras variantes del proyecto) — se cuelga esperando una
+ventana que nunca hace nada útil. Ver la sección "Simulación: estado y
+plan" del `README.md` para el detalle y el plan de arreglarlo de fondo.
+
+**Simulación que SÍ funciona hoy — test del registro `DIAG_REG5`
+("hola mundo" de la Etapa 2):**
 ```
-make PRJ=stream_app MODEL=Z10 sim
+./etapa2_sim_diag5.sh
 ```
+Corre en segundos (no minutos), sin GUI, sin proyecto Vivado — usa
+`xvlog`/`xelab`/`xsim` (línea de comandos, vienen con Vivado) para
+compilar y simular SOLO `scope_cfg.sv` (el decodificador de registros
+AXI) con un testbench dedicado
+(`prj/stream_app/tbn/tb_scope_cfg_diag5.sv`). Al final imprime:
+```
+RESULTADO: TODOS LOS CHECKS PASARON (7/7)
+```
+Si en cambio dice `CHECKS FALLARON` o `TIMEOUT`, algo se rompió en el
+decodificador de registros — revisar la salida completa arriba de esa
+línea, cada check dice `OK`/`FAIL` con la dirección y el valor leído.
+No valida el contador de `osc_top.v` ni el cableado completo de
+`rp_oscilloscope.v` todavía (ver plan en el README) — solo el
+decodificador de direcciones.
 
 ## Verificar que un build salió bien
 

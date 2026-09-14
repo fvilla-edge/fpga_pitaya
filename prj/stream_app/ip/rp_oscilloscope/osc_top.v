@@ -67,6 +67,7 @@ module osc_top
   output wire [              32-1:0]      diag2_o                 ,
   output wire [              32-1:0]      diag3_o                 ,
   output wire [              32-1:0]      diag4_o                 ,
+  output wire [              32-1:0]      diag5_o                 , // Etapa 2 (RedPitaya-FPGA): contador libre de "hola mundo"
 
   input  wire [TRIG_SRC_NUM-1:0]          trig_ip,
   output wire                             trig_op,
@@ -182,7 +183,19 @@ begin
   end
 end
 
-reg [S_AXIS_DATA_BITS-1:0] ramp_sig;    
+// Etapa 2 (RedPitaya-FPGA): contador libre, incrementa cada ciclo de clk_adc.
+// Sin conexion a ninguna logica existente - solo prueba que se puede agregar
+// RTL nuevo y leerlo por un registro AXI nuevo sin romper nada.
+reg [32-1:0] holamundo_cnt;
+always @(posedge clk_adc)
+begin
+  if (~adc_rstn)
+    holamundo_cnt <= 'h0;
+  else
+    holamundo_cnt <= holamundo_cnt + 'h1;
+end
+
+reg [S_AXIS_DATA_BITS-1:0] ramp_sig;
 always @(posedge clk_adc)
 begin
   if (~adc_rstn)
@@ -211,6 +224,7 @@ assign diag1_o = intr_cnt;
 assign diag2_o = trig_cnt;
 assign diag3_o = clk_cnt;
 assign diag4_o = cfg_dma_diags;
+assign diag5_o = holamundo_cnt;
 
 reg rstn_fil, rstn_cal, rstn_dec, rstn_trg, rstn_acq, rstn_smm;
 always @(posedge clk_adc) // resolve high fanout timing issues

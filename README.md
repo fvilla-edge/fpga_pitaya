@@ -93,12 +93,51 @@ tenerla.
       tocar, útil como punto de comparación cuando se agregue RTL propio
       (Etapa 2 en adelante): si ese número sube después de nuestros
       cambios, es señal de mirar más de cerca.
-- [ ] **Etapa 2 — "Hola mundo" en RTL.** Agregar un módulo trivial y sin
+- [x] **Etapa 2 — "Hola mundo" en RTL.** Agregar un módulo trivial y sin
       riesgo (un contador simple) leíble por un registro AXI nuevo, sin
       tocar nada existente. No hace nada útil todavía — el objetivo es
       probar que se puede agregar HDL nuevo, que compile, y que se pueda
       leer desde afuera por el mismo mecanismo de registros que va a usar
-      el filtro real, sin romper el build existente.
+      el filtro real, sin romper el build existente. **Hecho
+      (2026-09-14):** contador libre de 32 bits (`holamundo_cnt`,
+      incrementa cada ciclo de `clk_adc`, sin conexión a ninguna lógica
+      existente) agregado en `ip/rp_oscilloscope/osc_top.v`, expuesto
+      como registro nuevo `DIAG_REG5` (offset `0xF0`, el primer hueco
+      libre después de los diagnósticos existentes `0xE0-0xEC`) en
+      `scope_cfg.sv`, siguiendo el mismo patrón que los diagnósticos ya
+      existentes (`diag1_o..diag4_o`) — mismos 3 archivos tocados
+      (`osc_top.v`, `rp_oscilloscope.v`, `scope_cfg.sv`), ningún puerto
+      ni lógica existente modificados, solo agregados.
+      Validado por ahora solo con rebuild limpio (sin simulación
+      todavía): `Bitgen Completed Successfully`, DRC 0 errores. El
+      primer intento agregó un warning de estilo nuevo (`holamundo_cnt`
+      usado antes de su declaración) — corregido reordenando el
+      `reg`/`always` antes del `assign`. **Hallazgo metodológico:** el
+      conteo de warnings de DRC varía ±1 entre builds con el MISMO RTL
+      (comparado build a build: la diferencia fue un warning de
+      pipelining de DSP en `rp_dac`, un módulo que no tocamos) — Vivado
+      no es determinista al 100% entre corridas. Conclusión: un conteo
+      de warnings que sube o baja en 1 no es señal confiable de que un
+      cambio de RTL rompió algo; hay que buscar el nombre de la señal/
+      módulo propio en el log, no solo mirar el número agregado.
+      **Actualización (misma sesión, más tarde): validado en simulación.**
+      `make sim` resultó no servir para esto (ver sección "Simulación:
+      estado y plan" más abajo) — se armó en cambio un testbench propio,
+      standalone, con las herramientas de línea de comandos de Vivado
+      (`xvlog`/`xelab`/`xsim`, sin project/IP-integrator, sin GUI):
+      `prj/stream_app/tbn/tb_scope_cfg_diag5.sv` + `etapa2_sim_diag5.sh`.
+      Instancia SOLO `scope_cfg.sv` (el decodificador de registros AXI),
+      no `rp_oscilloscope.v` completo (motivo: depende de un core Xilinx
+      FIFO Generator vía catálogo de IP, que no compila standalone sin
+      generar antes esa IP en un proyecto — ver plan de simulación).
+      7/7 checks OK: los 4 diagnósticos existentes (`DIAG_REG1-4`) siguen
+      leyéndose bien, `DIAG_REG5` (0xF0) lee el valor correcto, sigue el
+      valor en vivo tras cambiarlo, y la dirección siguiente sin mapear
+      (0xF4) no alias-ea con él. **Lo que esto prueba:** el decodificador
+      de direcciones (la parte de más riesgo, tipeada a mano) está bien.
+      **Lo que esto NO prueba todavía:** que el contador de `osc_top.v` y
+      el cableado de 4 canales en `rp_oscilloscope.v` lleguen bien hasta
+      ahí (siguen sin simular) — pendiente real, ver plan de simulación.
 - [ ] **Etapa 3 — Filtro como "pasamanos" (bypass).** Insertar el bloque
       del filtro en el lugar real del pipeline (antes de `osc_decimator`,
       junto a `osc_filter`), configurado para no filtrar nada (pasar la
@@ -217,6 +256,78 @@ corriendo a mayor frecuencia — no evaluado todavía).
 - [ ] **Etapa 8 — Validación con datos reales en la placa nueva**,
       comparando contra el pipeline de software (mismo criterio de
       coincidencia de clasificación usado en el resto del proyecto).
+
+## Simulación: estado y plan (2026-09-14)
+
+El plan original (sección de arriba) asumía que `make sim` ya andaba y
+solo faltaba correrlo. **Resultó falso en dos niveles distintos**, ambos
+confirmados corriendo los comandos, no solo leyendo código:
+
+1. El target `sim` del Makefile invoca `vivado -source ...` **sin**
+   `-mode batch` — está pensado para abrir la GUI de Vivado de forma
+   interactiva, no para correr headless. En esta máquina se cuelga
+   esperando una ventana.
+2. Más de fondo: **no existe ningún `top_tb` para el proyecto
+   `stream_app` en la placa Z10** — ese archivo solo existe para otras
+   variantes del repo (`stream_app_4ch`, `stream_app_250`, `classic`,
+   `v0.94`, etc.), nunca se escribió para esta combinación. Aunque se
+   arreglara el modo batch, no habría qué correr.
+
+Arreglar esto de punta a punta (para tener un entorno de simulación
+completo del SoC, reusable para validar el filtro real de las Etapas 3
+y 4 contra datos capturados reales) es un trabajo grande aparte. Para no
+bloquear la Etapa 2 con eso, se armó un camino corto en paralelo. Las
+dos cosas conviven, son etapas de una escalera, no alternativas:
+
+- [x] **Simulación A — Unit test standalone de `scope_cfg.sv` (hecho
+      2026-09-14).** Compila con `xvlog`/`xelab`/`xsim` (herramientas de
+      línea de comandos que vienen con Vivado, sin project ni
+      IP-integrator, sin GUI) SOLO el decodificador de registros AXI
+      (`scope_cfg.sv`) + sus dependencias de RTL plano (`axi4_if.sv`,
+      `sys_bus_if.sv`, `axi4_slave.sv`, `sync_rw_single.v`, todas en
+      `rtl/`, sin IP de Xilinx) + el modelo de maestro AXI que ya existía
+      en `tbn/axi_master_model.sv`. Testbench nuevo:
+      `prj/stream_app/tbn/tb_scope_cfg_diag5.sv`, script:
+      `etapa2_sim_diag5.sh` (`./etapa2_sim_diag5.sh`, tarda segundos, no
+      minutos). Prueba el decodificador de direcciones con valores
+      inventados en `diagN_i` — rápido y determinista, pero NO pasa por
+      el contador real de `osc_top.v` ni por el cableado de canales de
+      `rp_oscilloscope.v`.
+- [ ] **Simulación B — Sumar `osc_top.v` al mismo testbench standalone.**
+      En vez de alimentar `diag5_i` a mano, instanciar `osc_top.v`
+      (verificar primero que no tiene ninguna dependencia de IP de
+      Xilinx — a diferencia de `rp_oscilloscope.v`, no debería, ya que
+      el core FIFO Generator lo usan los bloques de DMA que viven un
+      nivel más arriba) y leer su `diag5_o` real. Prueba el contador +
+      el `assign` en `osc_top.v`, sigue sin probar el cableado de 4
+      canales en `rp_oscilloscope.v`.
+- [ ] **Simulación C — Sumar `rp_oscilloscope.v` completo.** Acá sí
+      aparece la dependencia real: sus bloques de DMA (`U_dma_s2mm`)
+      instancian un core Xilinx FIFO Generator vía catálogo de IP, que
+      no tiene un modelo de simulación como archivo de texto plano — hay
+      que generarlo (`generate_target simulation` sobre un proyecto
+      Vivado mínimo, no todo el block design) antes de poder compilarlo
+      con `xvlog`. Alternativa más rápida a evaluar: un stub/mock de
+      simulación de esos bloques de DMA si no son relevantes para lo que
+      se esté probando (el filtro/contador no los toca).
+- [ ] **Simulación D — Arreglar el flujo completo del SoC (`make sim`
+      real).** Escribir el `top_tb` que falta para `stream_app`+Z10,
+      usando `system_model.sv` (el modelo de comportamiento de la PS que
+      ya está en `tbn/`, se usa en otras variantes del proyecto) y
+      correrlo en modo batch (agregar `-mode batch` al target `sim` del
+      Makefile, o un script aparte que no la toque). Esto es lo que hace
+      falta para inyectar una captura real (de `datos_campo/` en Sand
+      Monitoring) como estímulo de ADC y validar el filtro completo
+      (Etapa 4c) contra el criterio real de clasificación, sin esperar a
+      la placa nueva. Es la etapa más grande de las 4 — no arrancar sin
+      confirmar antes que B y C ya dieron resultado.
+
+**Cómo no perderse en esto:** cada simulación nueva se prueba SOLA
+primero (correr el script, ver que compila y corre, revisar los
+resultados) antes de sumarle la siguiente pieza — mismo espíritu que las
+Etapas 4a/4b/4c del filtro. Si una pieza nueva no compila por una
+dependencia de IP de Xilinx no resuelta, ese es exactamente el punto en
+el que hay que decidir generar la IP o mockearla, no forzar un atajo.
 
 ## Referencias
 

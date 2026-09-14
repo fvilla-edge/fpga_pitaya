@@ -262,6 +262,7 @@ wire [4*32-1:0]             diag1;
 wire [4*32-1:0]             diag2;
 wire [4*32-1:0]             diag3;
 wire [4*32-1:0]             diag4;
+wire [4*32-1:0]             diag5;
 
 wire [4-1:0]                ramp_en;
 wire [4-1:0]                loopback_gpio;
@@ -477,7 +478,8 @@ scope_cfg #(
   .diag1_i                  (diag1[1*32-1:0*32]),
   .diag2_i                  (diag2[1*32-1:0*32]),
   .diag3_i                  (diag3[1*32-1:0*32]),
-  .diag4_i                  (diag4[1*32-1:0*32])
+  .diag4_i                  (diag4[1*32-1:0*32]),
+  .diag5_i                  (diag5[1*32-1:0*32])
 ); 
 
 
@@ -560,6 +562,7 @@ osc_top #(
   .diag2_o                  (diag2[(GV+1)*32-1:GV*32]),
   .diag3_o                  (diag3[(GV+1)*32-1:GV*32]),
   .diag4_o                  (diag4[(GV+1)*32-1:GV*32]),
+  .diag5_o                  (diag5[(GV+1)*32-1:GV*32]),
 
   .trig_ip          (trig_ip),
   .trig_op          (osc_trig_op[GV]),  

@@ -1,7 +1,7 @@
 Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
-| Date             : Mon Sep 14 10:53:18 2026
+| Date             : Mon Sep 14 11:22:20 2026
 | Host             : facu-edge running 64-bit Ubuntu 24.04.4 LTS
 | Command          : report_power -file out/post_synth_power.rpt
 | Design           : red_pitaya_top
@@ -30,7 +30,7 @@ Table of Contents
 ----------
 
 +--------------------------+--------------+
-| Total On-Chip Power (W)  | 2.103        |
+| Total On-Chip Power (W)  | 2.104        |
 | Design Power Budget (W)  | Unspecified* |
 | Power Budget Margin (W)  | NA           |
 | Dynamic (W)              | 1.967        |
@@ -53,15 +53,15 @@ Table of Contents
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
 | Clocks                   |     0.080 |       19 |       --- |             --- |
-| Slice Logic              |     0.035 |    26289 |       --- |             --- |
-|   LUT as Logic           |     0.029 |     9227 |     17600 |           52.43 |
-|   CARRY4                 |     0.004 |      761 |      4400 |           17.30 |
-|   Register               |     0.003 |    12673 |     35200 |           36.00 |
+| Slice Logic              |     0.035 |    26337 |       --- |             --- |
+|   LUT as Logic           |     0.029 |     9234 |     17600 |           52.47 |
+|   CARRY4                 |     0.004 |      769 |      4400 |           17.48 |
+|   Register               |     0.003 |    12705 |     35200 |           36.09 |
 |   LUT as Distributed RAM |    <0.001 |       72 |      6000 |            1.20 |
-|   F7/F8 Muxes            |    <0.001 |      123 |     17600 |            0.70 |
+|   F7/F8 Muxes            |    <0.001 |      126 |     17600 |            0.72 |
 |   LUT as Shift Register  |    <0.001 |      152 |      6000 |            2.53 |
 |   Others                 |     0.000 |     1312 |       --- |             --- |
-| Signals                  |     0.041 |    22597 |       --- |             --- |
+| Signals                  |     0.041 |    22605 |       --- |             --- |
 | Block RAM                |     0.034 |       19 |        60 |           31.67 |
 | MMCM                     |     0.108 |        1 |         2 |           50.00 |
 | PLL                      |     0.096 |        1 |         2 |           50.00 |
@@ -70,7 +70,7 @@ Table of Contents
 | XADC                     |     0.002 |        1 |       --- |             --- |
 | PS7                      |     1.309 |        1 |       --- |             --- |
 | Static Power             |     0.137 |          |           |                 |
-| Total                    |     2.102 |          |           |                 |
+| Total                    |     2.103 |          |           |                 |
 +--------------------------+-----------+----------+-----------+-----------------+
 
 
@@ -176,7 +176,7 @@ Table of Contents
 |   i_OBUF_trig            |     0.004 |
 |   pll                    |     0.097 |
 |   system_wrapper_i       |     1.621 |
-|     axi_interconnect_0   |     0.004 |
+|     axi_interconnect_0   |     0.005 |
 |       m00_couplers       |     0.003 |
 |       xbar               |     0.001 |
 |     axi_interconnect_2   |     0.009 |

@@ -109,7 +109,8 @@ module scope_cfg
    input  wire [              32-1:0]  diag1_i                 ,
    input  wire [              32-1:0]  diag2_i                 ,
    input  wire [              32-1:0]  diag3_i                 ,
-   input  wire [              32-1:0]  diag4_i
+   input  wire [              32-1:0]  diag4_i                 ,
+   input  wire [              32-1:0]  diag5_i
 );
 
 
@@ -207,6 +208,7 @@ localparam DIAG_REG1                = 12'hE0; // interrupt counter
 localparam DIAG_REG2                = 12'hE4; // external trigger counter
 localparam DIAG_REG3                = 12'hE8; // clock counter
 localparam DIAG_REG4                = 12'hEC; // status of state machine
+localparam DIAG_REG5                = 12'hF0; // Etapa 2 (RedPitaya-FPGA): contador libre de "hola mundo", sin uso funcional
 
 localparam STATUS_REG               = 12'h100;   // status of FPGA clock
 localparam CLKSEL_REG               = 16'h1000;  // FPGA mode
@@ -474,6 +476,7 @@ begin
       DIAG_REG2              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag2_i;                  end
       DIAG_REG3              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag3_i;                  end
       DIAG_REG4              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag4_i;                  end
+      DIAG_REG5              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag5_i;                  end
       STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , daisy_slave, pll_locked}; end
 
       CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[1*16-1:0*16]};    end
