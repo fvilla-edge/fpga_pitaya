@@ -65,14 +65,34 @@ Cada etapa prueba UNA cosa nueva antes de sumar la siguiente. Las etapas
 0-4 se pueden hacer sin la placa nueva; de la 5 en adelante hace falta
 tenerla.
 
-- [ ] **Etapa 0 — Git.** `git init` + commit inicial de todo tal cual está
+- [x] **Etapa 0 — Git.** `git init` + commit inicial de todo tal cual está
       (incluye el build ya hecho de `stream_app`). No cambia nada
-      funcional, da una base para poder volver atrás.
-- [ ] **Etapa 1 — Confirmar el toolchain, sin tocar RTL.** Recompilar
+      funcional, da una base para poder volver atrás. **Hecho
+      (2026-09-14):** repo respaldado en GitHub (`fpga_pitaya`, privado),
+      con `.gitignore` excluyendo `.srcs`/`.Xil`/logs regenerables
+      (`.git` bajó de ~373MB a 59MB sin perder nada necesario).
+- [x] **Etapa 1 — Confirmar el toolchain, sin tocar RTL.** Recompilar
       `stream_app` tal cual está (sin ningún cambio propio) con el
       Makefile del repo, medir cuánto tarda un build completo. Prueba que
       Vivado+licencia+proyecto andan juntos de punta a punta en esta
-      máquina, y da una idea real del ciclo de iteración.
+      máquina, y da una idea real del ciclo de iteración. **Hecho
+      (2026-09-14):** `make PRJ=stream_app clean` + rebuild del bitstream
+      (`make PRJ=stream_app MODEL=Z10 prj/stream_app/out/red_pitaya.bit`)
+      desde cero. Tiempo real: **5m08s** (`user` 7m57s con 8 hilos).
+      `Bitgen Completed Successfully`, DRC con 0 errores. No se
+      recompilaron FSBL/device-tree (`$(FSBL_ELF)`/`$(DEVICE_TREE)`) —
+      requieren `xsct`/`hsi` (Vitis/SDK), que no están instalados en esta
+      máquina; no hacen falta para iterar sobre el filtro, solo para
+      generar la imagen de boot completa. **Nota:** `synCheck.sh` tiene
+      `FILEPATH="prj/v0.94/out/"` hardcodeado (no respeta `$(PRJ)`) — los
+      3 `ERROR: file ... not found` que tira al final son falsos
+      negativos de ese bug preexistente del script, no un problema del
+      build de `stream_app`. Sí es un dato real: detectó **50
+      `CRITICAL WARNING:`** en todo el flujo (grep sobre `vivado.log`,
+      no relacionado a `$(PRJ)`) — esto es el baseline del diseño sin
+      tocar, útil como punto de comparación cuando se agregue RTL propio
+      (Etapa 2 en adelante): si ese número sube después de nuestros
+      cambios, es señal de mirar más de cerca.
 - [ ] **Etapa 2 — "Hola mundo" en RTL.** Agregar un módulo trivial y sin
       riesgo (un contador simple) leíble por un registro AXI nuevo, sin
       tocar nada existente. No hace nada útil todavía — el objetivo es
