@@ -85,13 +85,104 @@ tenerla.
       señal tal cual). Validar en **simulación** que los datos salen
       exactamente iguales que sin el bloque — prueba que encaja en el
       lugar correcto sin romper el flujo de datos.
-- [ ] **Etapa 4 — Filtro real, coeficientes fijos (orden 2).** Mismos
-      coeficientes que ya se validaron en software (`analisis/placa/` de
-      Sand Monitoring, commit `e979c5c`). Validar en simulación contra el
-      mismo archivo real usado en esa validación de software
-      (`datos_campo/42_1_reposo_20260903_145033` en el repo Sand
-      Monitoring), mismo criterio: no exigir igualdad numérica exacta,
-      sí que la clasificación de arena (kurtosis>=6 por ventana) coincida.
+- **Etapa 4 — Filtro real, biquad Direct Form I.** `osc_filter.v` NO es
+      reusable tal cual (ver "Estudio del filtro existente" más abajo) —
+      hace falta escribir un módulo biquad nuevo. Para no saltar directo
+      del bypass (Etapa 3) a los coeficientes reales, se divide en
+      sub-pasos chicos, cada uno aislando un tipo de error distinto antes
+      de sumar el siguiente (idea del usuario, sesión 2026-09-14: "ir
+      probando de a poco" aplicado a la integración del módulo, no a la
+      forma matemática del filtro — un pasabanda resonante necesita sí o
+      sí un par de polos complejos conjugados, no hay versión más
+      "simple" de la topología que siga sirviendo para el objetivo):
+  - [ ] **Etapa 4a — Biquad con coeficientes triviales.** `b0` = ganancia
+        unitaria, `b1=b2=a1=a2=0`. Validar en simulación que da
+        exactamente lo mismo que el bypass de la Etapa 3. Prueba que el
+        camino de datos del módulo nuevo (anchos de bit, saturación,
+        timing) no tiene bugs de plomería, sin meter todavía complejidad
+        numérica real.
+  - [ ] **Etapa 4b — Biquad con coeficientes simples conocidos.** Un
+        pasabajos de juguete, fácil de verificar a mano. Validar contra
+        `scipy.signal.lfilter` con esos mismos coeficientes (bit a bit o
+        con tolerancia chica). Prueba que la aritmética de punto fijo del
+        biquad es correcta en general, con un caso simple.
+  - [ ] **Etapa 4c — Biquad con los coeficientes reales.** Mismos
+        coeficientes que ya se validaron en software (`analisis/placa/`
+        de Sand Monitoring, commit `e979c5c`). Validar en simulación
+        contra el mismo archivo real usado en esa validación de software
+        (`datos_campo/42_1_reposo_20260903_145033` en el repo Sand
+        Monitoring), mismo criterio ya usado en todo el proyecto: no
+        exigir igualdad numérica exacta, sí que la clasificación de
+        arena (kurtosis>=6 por ventana) coincida.
+
+## Estudio del filtro existente (2026-09-14)
+
+Antes de escribir cualquier RTL nuevo, se leyó `osc_filter.v` completo
+(el filtro IIR configurable que el plan original asumía como plantilla
+directamente reutilizable) para entender su topología real.
+
+**Hallazgo: `osc_filter.v` no es un biquad de propósito general.**
+Rastreando la lógica (líneas 99-184 del archivo), la estructura es:
+
+- Una etapa tipo diferenciador/cero con `coeff_bb` (combina `din` crudo
+  y `din*bb` con un delay).
+- **IIR 1**: un único polo real por realimentación con `coeff_aa`
+  (`y[n] ≈ x[n]·K + y[n-1]·(1 − aa/2²⁵)`).
+- **IIR 2**: otro único polo real, independiente, con `coeff_pp`.
+- Escalado + saturación con `coeff_kk`.
+
+Son **dos polos reales en cascada, no un par de polos complejos
+conjugados**. Esto es coherente con su uso real en Red Pitaya: un filtro
+de compensación/shelving para corregir la respuesta del front-end
+analógico, no un pasabanda resonante. El pasabanda Butterworth orden 2
+ya validado en software (ver `analisis/placa/` de Sand Monitoring)
+necesita un par de polos complejos — la forma estándar es un biquad
+Direct Form (`b0,b1,b2,a1,a2`, con términos `x[n-2]`/`y[n-2]`), que esta
+estructura no tiene. **Conclusión: hace falta escribir un módulo nuevo,
+no reconfigurar este.** Lo que sí es reusable de `osc_filter.v` es el
+patrón de pipeline en punto fijo (anchos de bit trackeados a mano por
+etapa, `(* use_dsp="yes" *)` en los registros que deben mapear a DSP48,
+saturación final) — no la topología matemática.
+
+**Qué forma de biquad usar (Direct Form I, no Direct Form II
+Transposed):** para punto fijo en hardware, Direct Form I es la opción
+más segura. Confirmado indirectamente: la librería CMSIS-DSP de ARM solo
+ofrece su biquad "Direct Form II Transposed" en punto flotante — la
+documentación es explícita en que esa forma requiere rango dinámico
+amplio en las variables de estado internas, mientras que sus biquads en
+punto fijo (Q15/Q31) usan Direct Form I. La razón de fondo: en Direct
+Form I los registros de retardo guardan directamente muestras de entrada
+y salida pasadas (`x[n-1]`, `x[n-2]`, `y[n-1]`, `y[n-2]`), con rango
+acotado y conocido de antemano; en Direct Form II/Transposed el estado
+interno compartido puede crecer mucho más que la entrada o la salida
+(especialmente cerca de resonancia/alta Q), lo que obliga a guardar
+margen extra para no desbordar. Esto además es coherente con el propio
+`osc_filter.v`: sus dos secciones de un polo ya usan cadenas de
+acumulación separadas por término (no un estado canónico compartido),
+el mismo espíritu que Direct Form I.
+(Fuentes: [documentación CMSIS-DSP sobre Biquad Cascade DF2T](https://arm-software.github.io/CMSIS-DSP/latest/group__BiquadCascadeDF2T.html);
+comparación de estructuras de biquad en punto fijo discutida en
+[comp.dsp — IIR biquad implementation in fixed point/integer](https://www.dsprelated.com/showthread/comp.dsp/220284-1.php).)
+
+**Dato de hardware confirmado — DSP48E1 (Zynq 7010, 7-series):**
+multiplicador asimétrico 25×18 bits con dos puertos de entrada de ancho
+distinto. Esto explica por qué `osc_filter.v` usa `coeff_aa` de 18 bits
+(registro `0xC0`, puerto estrecho del DSP48) y `coeff_bb`/`coeff_kk`/
+`coeff_pp` de 24-25 bits (puerto ancho) — no es arbitrario, está pensado
+para mapear un multiplicador por coeficiente a un único DSP48E1. Para el
+biquad nuevo (5 coeficientes: `b0,b1,b2,a1,a2`) hay que decidir a
+propósito qué coeficientes van en el puerto de 18 bits y cuáles en el de
+25 — probablemente `a1,a2` (realimentación, más sensibles a precisión
+cerca del círculo unitario) en el puerto ancho, y `b0,b1,b2` en el
+estrecho, pero esto se valida numéricamente en simulación contra los
+coeficientes reales de `analisis/placa/`, no se decide a priori.
+
+**Pendiente todavía sin resolver, para cuando se escriba el módulo:**
+el tracking exacto de crecimiento de bits por etapa (como hace
+`osc_filter.v` en sus comentarios) y cuántos DSP48E1 hacen falta por
+canal (mínimo 5 multiplicadores por biquad si no se time-multiplexa;
+a 125 MSPS con margen de reloj interno podría compartirse menos DSP48
+corriendo a mayor frecuencia — no evaluado todavía).
 - [ ] **Etapa 5 (opcional, más ambiciosa) — Acumuladores de área/kurtosis
       en HW.** No solo el filtro: sumas de |x|, x² y x⁴ por ventana
       también son streameables (ver memoria del proyecto sec.173).
