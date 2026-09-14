@@ -83,6 +83,29 @@ real del biquad — en ese momento el testbench cambia de "es igual a la
 entrada" a "coincide con lo que da `scipy.signal.lfilter` con los mismos
 coeficientes".
 
+**Etapa 4a (coeficientes triviales, `b0=1.0` resto en 0)** ya no tiene
+script propio — quedó superada por la Etapa 4b (mismo módulo, coeficientes
+reemplazados) y el test que la validaba (`tb_bandpass_biquad_unity.sv`,
+297/297 checks) se borró porque ya no aplica al código actual. El
+resultado sigue documentado en el README y en el historial de git
+(commit de la Etapa 4a) si hace falta revisarlo.
+
+**Simulación del biquad con coeficientes reales de un pasabajos
+(Etapa 4b):**
+```
+./etapa4b_sim_bandpass.sh
+```
+Mismo estilo (segundos, sin GUI). Compara contra vectores golden
+precalculados (`tbn/vectores/etapa4b_input.mem` /
+`etapa4b_expected.mem`) generados con un modelo en Python que replica
+EXACTO la misma aritmética de punto fijo del RTL (no es una comparación
+contra el filtro ideal en punto flotante — es bit exacto contra "lo que
+este punto fijo debería dar"). La latencia real del pipeline es
+**1 ciclo** (todo el producto-acumulado-saturado es combinacional, un
+solo registro de historia a la entrada y uno a la salida) — si se toca
+el RTL y hay que regenerar los vectores, el script Python usado para
+generarlos está descrito en el README (sección de la Etapa 4b).
+
 ## Verificar que un build salió bien
 
 - El bitstream queda en `prj/stream_app/out/red_pitaya.bit`.

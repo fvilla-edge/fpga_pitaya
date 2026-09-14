@@ -1,7 +1,7 @@
 Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2020.1 (lin64) Build 2902540 Wed May 27 19:54:35 MDT 2020
-| Date             : Mon Sep 14 12:25:50 2026
+| Date             : Mon Sep 14 14:27:37 2026
 | Host             : facu-edge running 64-bit Ubuntu 24.04.4 LTS
 | Command          : report_power -file out/post_route_power.rpt
 | Design           : red_pitaya_top
@@ -30,14 +30,14 @@ Table of Contents
 ----------
 
 +--------------------------+--------------+
-| Total On-Chip Power (W)  | 1.980        |
+| Total On-Chip Power (W)  | 1.998        |
 | Design Power Budget (W)  | Unspecified* |
 | Power Budget Margin (W)  | NA           |
-| Dynamic (W)              | 1.846        |
+| Dynamic (W)              | 1.864        |
 | Device Static (W)        | 0.134        |
 | Effective TJA (C/W)      | 11.5         |
-| Max Ambient (C)          | 62.2         |
-| Junction Temperature (C) | 47.8         |
+| Max Ambient (C)          | 62.0         |
+| Junction Temperature (C) | 48.0         |
 | Confidence Level         | Low          |
 | Setting File             | ---          |
 | Simulation Activity File | ---          |
@@ -52,25 +52,25 @@ Table of Contents
 +--------------------------+-----------+----------+-----------+-----------------+
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
-| Clocks                   |     0.056 |       17 |       --- |             --- |
-| Slice Logic              |     0.022 |    24119 |       --- |             --- |
-|   LUT as Logic           |     0.018 |     8206 |     17600 |           46.63 |
-|   CARRY4                 |     0.002 |      732 |      4400 |           16.64 |
-|   Register               |     0.002 |    11695 |     35200 |           33.22 |
+| Clocks                   |     0.058 |       17 |       --- |             --- |
+| Slice Logic              |     0.023 |    24235 |       --- |             --- |
+|   LUT as Logic           |     0.019 |     8236 |     17600 |           46.80 |
+|   CARRY4                 |     0.002 |      736 |      4400 |           16.73 |
+|   Register               |     0.002 |    11754 |     35200 |           33.39 |
 |   LUT as Distributed RAM |    <0.001 |       70 |      6000 |            1.17 |
 |   F7/F8 Muxes            |    <0.001 |      126 |     17600 |            0.72 |
 |   LUT as Shift Register  |    <0.001 |      135 |      6000 |            2.25 |
-|   Others                 |     0.000 |      989 |       --- |             --- |
-| Signals                  |     0.035 |    19148 |       --- |             --- |
+|   Others                 |     0.000 |      998 |       --- |             --- |
+| Signals                  |     0.037 |    19734 |       --- |             --- |
 | Block RAM                |     0.031 |       19 |        60 |           31.67 |
 | MMCM                     |     0.107 |        1 |         2 |           50.00 |
 | PLL                      |     0.097 |        1 |         2 |           50.00 |
-| DSPs                     |     0.015 |       18 |        80 |           22.50 |
+| DSPs                     |     0.028 |       30 |        80 |           37.50 |
 | I/O                      |     0.171 |       87 |       100 |           87.00 |
 | XADC                     |     0.002 |        1 |       --- |             --- |
 | PS7                      |     1.309 |        1 |       --- |             --- |
 | Static Power             |     0.134 |          |           |                 |
-| Total                    |     1.980 |          |           |                 |
+| Total                    |     1.998 |          |           |                 |
 +--------------------------+-----------+----------+-----------+-----------------+
 
 
@@ -80,7 +80,7 @@ Table of Contents
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
 | Source    | Voltage (V) | Total (A) | Dynamic (A) | Static (A) | Powerup (A) | Budget (A)  | Margin (A) |
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
-| Vccint    |       1.000 |     0.175 |       0.166 |      0.009 |       NA    | Unspecified | NA         |
+| Vccint    |       1.000 |     0.192 |       0.184 |      0.009 |       NA    | Unspecified | NA         |
 | Vccaux    |       1.800 |     0.125 |       0.116 |      0.009 |       NA    | Unspecified | NA         |
 | Vcco33    |       3.300 |     0.042 |       0.041 |      0.001 |       NA    | Unspecified | NA         |
 | Vcco25    |       2.500 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
@@ -166,11 +166,11 @@ Table of Contents
 +--------------------------+-----------+
 | Name                     | Power (W) |
 +--------------------------+-----------+
-| red_pitaya_top           |     1.846 |
+| red_pitaya_top           |     1.864 |
 |   i_OBUF_clk             |     0.014 |
 |   i_OBUF_trig            |     0.004 |
 |   pll                    |     0.097 |
-|   system_wrapper_i       |     1.579 |
+|   system_wrapper_i       |     1.597 |
 |     axi_interconnect_0   |     0.003 |
 |       m00_couplers       |     0.002 |
 |       xbar               |     0.001 |
@@ -183,14 +183,14 @@ Table of Contents
 |       xbar               |     0.003 |
 |     clk_gen              |     0.108 |
 |       inst               |     0.108 |
-|     processing_system7_0 |     1.312 |
-|       inst               |     1.312 |
-|     rp_dac               |     0.064 |
-|       inst               |     0.064 |
+|     processing_system7_0 |     1.311 |
+|       inst               |     1.311 |
+|     rp_dac               |     0.063 |
+|       inst               |     0.063 |
 |     rp_gpio              |     0.022 |
 |       inst               |     0.022 |
-|     rp_oscilloscope      |     0.059 |
-|       inst               |     0.059 |
+|     rp_oscilloscope      |     0.077 |
+|       inst               |     0.077 |
 |     xadc                 |     0.002 |
 |       inst               |     0.002 |
 +--------------------------+-----------+

@@ -177,17 +177,74 @@ tenerla.
       forma matemática del filtro — un pasabanda resonante necesita sí o
       sí un par de polos complejos conjugados, no hay versión más
       "simple" de la topología que siga sirviendo para el objetivo):
-  - [ ] **Etapa 4a — Biquad con coeficientes triviales.** `b0` = ganancia
+  - [x] **Etapa 4a — Biquad con coeficientes triviales.** `b0` = ganancia
         unitaria, `b1=b2=a1=a2=0`. Validar en simulación que da
         exactamente lo mismo que el bypass de la Etapa 3. Prueba que el
         camino de datos del módulo nuevo (anchos de bit, saturación,
         timing) no tiene bugs de plomería, sin meter todavía complejidad
-        numérica real.
-  - [ ] **Etapa 4b — Biquad con coeficientes simples conocidos.** Un
+        numérica real. **Hecho (2026-09-14):** biquad Direct Form I real
+        en `bandpass_biquad.v` (5 coeficientes, historia de 2 muestras de
+        entrada y 2 de salida) — formato de punto fijo elegido para los
+        coeficientes: **Q1.16 con signo en 18 bits** (decisión nueva, no
+        dictada por el software: el filtro en C real usa `float`, no
+        punto fijo). Coeficientes hardcodeados como `localparam`
+        (`b0=65536` = 1.0 exacto, resto en 0) — sin registro AXI todavía,
+        eso se agrega si hace falta ajustar sin recompilar. Validado en
+        simulación standalone (`etapa4a_sim_bandpass.sh` +
+        `tbn/tb_bandpass_biquad_unity.sv`): 297/297 checks, comparando
+        contra la entrada retrasada 3 ciclos (la latencia real del
+        pipeline: historia → acumulador → salida) — antes se comparaba
+        ciclo a ciclo porque la Etapa 3 no tenía latencia, ahora sí.
+        Rebuild completo del bitstream OK (`Bitgen Completed
+        Successfully`, DRC 0 errores). **Hueco real, a tener en cuenta
+        en la Etapa 4b:** el conteo de DSP48E1 en el reporte de
+        utilización quedó IDÉNTICO al de la Etapa 3 (18, sin biquad) —
+        Vivado optimizó las 5 multiplicaciones a nada, porque `b0` es una
+        potencia de 2 (equivale a un corrimiento de bits, no a un
+        multiplicador real) y el resto de los coeficientes son cero. Esto
+        prueba que el *pipeline* está bien, pero **no prueba todavía que
+        una multiplicación real por un coeficiente no trivial sintetice
+        bien** (inferencia de DSP48, anchos de bit en el peor caso) — eso
+        recién se ve en la Etapa 4b.
+        **Actualización tras la Etapa 4b: ese hueco escondía un bug
+        real.** El diseño de 3 registros (historia → acumulador →
+        salida) tenía las muestras `x0/x1/x2` avanzando 2 ciclos más
+        rápido que el feedback `y1/y2` — la ecuación del filtro quedaba
+        con términos de "tiempos" distintos. Invisible acá porque
+        `a1=a2=0` (sin feedback que romper), salió a la luz recién con
+        coeficientes reales. RTL corregido en la Etapa 4b (acumulador
+        combinacional, un solo ciclo). El testbench de esta etapa
+        (`tb_bandpass_biquad_unity.sv`, `etapa4a_sim_bandpass.sh`) se
+        borró — ya no aplica una vez reemplazados los coeficientes por
+        los de la 4b, y mantenerlo solo generaría un test roto por
+        diseño. El resultado de 297/297 queda documentado acá y en el
+        commit de esta etapa.
+  - [x] **Etapa 4b — Biquad con coeficientes simples conocidos.** Un
         pasabajos de juguete, fácil de verificar a mano. Validar contra
         `scipy.signal.lfilter` con esos mismos coeficientes (bit a bit o
         con tolerancia chica). Prueba que la aritmética de punto fijo del
-        biquad es correcta en general, con un caso simple.
+        biquad es correcta en general, con un caso simple. **Hecho
+        (2026-09-14):** sin `scipy` disponible en esta máquina (no está
+        instalado) — coeficientes calculados a mano con la fórmula
+        estándar RBJ Audio EQ Cookbook (pasabajos Butterworth orden 2,
+        `f0/fs=0.05`, `Q=1/√2`), usando solo `math` de Python (sin
+        dependencias nuevas). Vectores golden (`tbn/vectores/
+        etapa4b_input.mem`/`etapa4b_expected.mem`, 200 muestras: impulso
+        + escalón + ruido) generados con un modelo Python que replica
+        EXACTO la misma aritmética de punto fijo del RTL (no contra el
+        filtro ideal en punto flotante — la validación "con tolerancia"
+        que preveía el plan no hizo falta, salió bit exacto). Acá se
+        encontró y arregló el bug de alineación temporal descrito arriba
+        (Etapa 4a) — la Etapa 4a no lo detectó porque coeficientes
+        triviales no ejercitan el feedback. Validado en simulación
+        standalone (`etapa4b_sim_bandpass.sh` +
+        `tbn/tb_bandpass_biquad_lowpass.sv`): **200/200 checks**, latencia
+        real del pipeline corregida a **1 ciclo** (antes 3, ver nota de
+        arriba). Rebuild completo del bitstream OK
+        (`Bitgen Completed Successfully`, DRC 0 errores) — y esta vez el
+        conteo de DSP48E1 SÍ subió (18 → 30), confirmando que los
+        coeficientes no triviales generan multiplicadores reales, a
+        diferencia de la Etapa 4a.
   - [ ] **Etapa 4c — Biquad con los coeficientes reales.** Mismos
         coeficientes que ya se validaron en software (`analisis/placa/`
         de Sand Monitoring, commit `e979c5c`). Validar en simulación
