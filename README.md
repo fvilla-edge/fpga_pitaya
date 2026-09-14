@@ -403,9 +403,43 @@ corriendo a mayor frecuencia — no evaluado todavía).
       en HW.** No solo el filtro: sumas de |x|, x² y x⁴ por ventana
       también son streameables (ver memoria del proyecto sec.173).
       Validar igual, en simulación, contra los mismos datos reales.
-- [ ] **Etapa 6 — Coeficientes configurables por software**, igual que ya
+- [x] **Etapa 6 — Coeficientes configurables por software**, igual que ya
       hace `osc_filter.v` (`cfg_coeff_*`, `cfg_bypass`) — para no
-      recompilar el bitstream cada vez que se ajuste el filtro.
+      recompilar el bitstream cada vez que se ajuste el filtro. **Hecho
+      (2026-09-14):** los 5 coeficientes de cada una de las 2 secciones
+      de `bandpass_filter.v` pasaron de ser parámetros de compilación
+      (Etapa 4c) a **puertos de entrada** — `bandpass_biquad.v` ya no
+      tiene coeficientes hardcodeados. 10 registros nuevos en
+      `scope_cfg.sv` (offsets `0x200-0x224`, 4 bytes cada uno,
+      `BP_COEFF_{B0,B1,B2,A1,A2}_S{0,1}`) — **compartidos entre los 2
+      canales**, no duplicados por canal como los de `osc_filter.v`
+      (decisión para no llegar a 20 registros; si algún día hace falta
+      independencia por canal, hay que revisar esto). Valor por defecto
+      de los registros = exactamente los coeficientes reales validados
+      en la Etapa 4c, así que sin escribir nada desde software el
+      comportamiento es idéntico a antes.
+      **Esto resuelve la limitación que había quedado documentada en la
+      Etapa 4c:** el filtro tenía los coeficientes fijos para decimación
+      32 únicamente. Ahora el host puede recalcular coeficientes (mismo
+      método que `tbn/vectores/generar_etapa4c.py`, con `scipy`) para
+      decimación 64 u otra banda y cargarlos por registro, sin
+      recompilar el bitstream — la limitación sigue existiendo en el
+      sentido de que hace falta ese paso manual (no hay detección
+      automática de qué decimación está activa), pero ya no exige volver
+      a sintetizar.
+      Validado en simulación (mismo `etapa4c_sim_bandpass.sh`/
+      `tbn/tb_bandpass_filter.sv`, ahora alimentando los coeficientes por
+      puerto en vez de por parámetro): 45880/45880 checks OK — los
+      45877 de siempre (confirma que el default no cambió el
+      comportamiento) más 3 nuevos que reconfiguran a ganancia unitaria
+      **en caliente, sin reset**, y confirman que el filtro pasa a
+      comportarse como pasamanos de verdad (no solo que compila con el
+      valor default correcto). Rebuild completo del bitstream OK
+      (`Bitgen Completed Successfully`, DRC 0 errores, DSP48E1 32→38 —
+      subió porque con coeficientes constantes Vivado podía optimizar
+      algunas multiplicaciones sin usar DSP48 real; con coeficientes
+      variables por registro ya no puede, cada multiplicación necesita
+      su propio DSP48 real).
 - [ ] **Etapa 7 — Primera prueba en la placa nueva, cuando llegue.**
       Primero confirmar que la captura/`rpsa_client` que YA funciona sigue
       andando igual con el bitstream nuevo, ANTES de mirar si el filtro

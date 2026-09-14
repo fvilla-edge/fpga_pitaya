@@ -98,6 +98,19 @@ module scope_cfg
    output wire [            4*25-1:0]  cfg_filt_coeff_kk_o ,
    output wire [            4*25-1:0]  cfg_filt_coeff_pp_o ,
 
+   // Etapa 6 (RedPitaya-FPGA): coeficientes del pasabanda de deteccion de
+   // arena (bandpass_filter.v) - compartidos entre canales, no por canal
+   output wire signed [       25-1:0]  cfg_bp_coeff_b0_s0_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_b1_s0_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_b2_s0_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_a1_s0_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_a2_s0_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_b0_s1_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_b1_s1_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_b2_s1_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_a1_s1_o,
+   output wire signed [       25-1:0]  cfg_bp_coeff_a2_s1_o,
+
    output wire [            4*32-1:0]  cfg_dma_dst_addr1_o ,
    output wire [            4*32-1:0]  cfg_dma_dst_addr2_o ,
 
@@ -210,6 +223,19 @@ localparam DIAG_REG3                = 12'hE8; // clock counter
 localparam DIAG_REG4                = 12'hEC; // status of state machine
 localparam DIAG_REG5                = 12'hF0; // Etapa 2 (RedPitaya-FPGA): contador libre de "hola mundo", sin uso funcional
 
+// Etapa 6 (RedPitaya-FPGA): coeficientes del pasabanda de deteccion de
+// arena, configurables por registro (bandpass_filter.v, 2 secciones)
+localparam BP_COEFF_B0_S0           = 12'h200;
+localparam BP_COEFF_B1_S0           = 12'h204;
+localparam BP_COEFF_B2_S0           = 12'h208;
+localparam BP_COEFF_A1_S0           = 12'h20C;
+localparam BP_COEFF_A2_S0           = 12'h210;
+localparam BP_COEFF_B0_S1           = 12'h214;
+localparam BP_COEFF_B1_S1           = 12'h218;
+localparam BP_COEFF_B2_S1           = 12'h21C;
+localparam BP_COEFF_A1_S1           = 12'h220;
+localparam BP_COEFF_A2_S1           = 12'h224;
+
 localparam STATUS_REG               = 12'h100;   // status of FPGA clock
 localparam CLKSEL_REG               = 16'h1000;  // FPGA mode
 
@@ -246,7 +272,22 @@ reg  [4*16-1:0]               cfg_calib_gain;
 reg signed [4*18-1:0]         cfg_filt_coeff_aa; 
 reg signed [4*25-1:0]         cfg_filt_coeff_bb; 
 reg signed [4*25-1:0]         cfg_filt_coeff_kk; 
-reg signed [4*25-1:0]         cfg_filt_coeff_pp; 
+reg signed [4*25-1:0]         cfg_filt_coeff_pp;
+
+// Etapa 6 (RedPitaya-FPGA): coeficientes del pasabanda de deteccion de
+// arena - default = filtro real validado en la Etapa 4c (Butterworth
+// orden 2, 50-400kHz, fs=3906250Hz/decimacion 32). Sin escribir nada
+// desde software, el comportamiento es identico a la Etapa 4c.
+reg signed [25-1:0]           cfg_bp_coeff_b0_s0;
+reg signed [25-1:0]           cfg_bp_coeff_b1_s0;
+reg signed [25-1:0]           cfg_bp_coeff_b2_s0;
+reg signed [25-1:0]           cfg_bp_coeff_a1_s0;
+reg signed [25-1:0]           cfg_bp_coeff_a2_s0;
+reg signed [25-1:0]           cfg_bp_coeff_b0_s1;
+reg signed [25-1:0]           cfg_bp_coeff_b1_s1;
+reg signed [25-1:0]           cfg_bp_coeff_b2_s1;
+reg signed [25-1:0]           cfg_bp_coeff_a1_s1;
+reg signed [25-1:0]           cfg_bp_coeff_a2_s1;
 
 reg  [ 4-1: 0]              event_op_reg;
 
@@ -399,6 +440,17 @@ begin
 
       cfg_calib_offset        <= {4{16'h0}};
       cfg_calib_gain          <= {4{16'h8000}};
+
+      cfg_bp_coeff_b0_s0      <= 25'sd58743;
+      cfg_bp_coeff_b1_s0      <= 25'sd117487;
+      cfg_bp_coeff_b2_s0      <= 25'sd58743;
+      cfg_bp_coeff_a1_s0      <= -25'sd1311029;
+      cfg_bp_coeff_a2_s0      <= 25'sd526845;
+      cfg_bp_coeff_b0_s1      <= 25'sd1048576;
+      cfg_bp_coeff_b1_s1      <= -25'sd2097152;
+      cfg_bp_coeff_b2_s1      <= 25'sd1048576;
+      cfg_bp_coeff_a1_s1      <= -25'sd1984139;
+      cfg_bp_coeff_a2_s1      <= 25'sd943367;
    end else begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==EVENT_STS_ADDR)        )  event_op_reg            <= reg_wdat_adc[3:0]; else event_op_reg <= 4'h0;
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==EVENT_SEL_ADDR)        )  cfg_event_sel           <= reg_wdat_adc[3-1:0];
@@ -445,6 +497,17 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_PP_CH3)     )  cfg_filt_coeff_pp[3*25-1:2*25] <= reg_wdat_adc[25-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_COEFF_PP_CH4)     )  cfg_filt_coeff_pp[4*25-1:3*25] <= reg_wdat_adc[25-1:0];
 
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_B0_S0)        )  cfg_bp_coeff_b0_s0 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_B1_S0)        )  cfg_bp_coeff_b1_s0 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_B2_S0)        )  cfg_bp_coeff_b2_s0 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_A1_S0)        )  cfg_bp_coeff_a1_s0 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_A2_S0)        )  cfg_bp_coeff_a2_s0 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_B0_S1)        )  cfg_bp_coeff_b0_s1 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_B1_S1)        )  cfg_bp_coeff_b1_s1 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_B2_S1)        )  cfg_bp_coeff_b2_s1 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_A1_S1)        )  cfg_bp_coeff_a1_s1 <= reg_wdat_adc[25-1:0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==BP_COEFF_A2_S1)        )  cfg_bp_coeff_a2_s1 <= reg_wdat_adc[25-1:0];
+
    end
 end
 
@@ -477,6 +540,16 @@ begin
       DIAG_REG3              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag3_i;                  end
       DIAG_REG4              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag4_i;                  end
       DIAG_REG5              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag5_i;                  end
+      BP_COEFF_B0_S0         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_b0_s0};                        end
+      BP_COEFF_B1_S0         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_b1_s0};                        end
+      BP_COEFF_B2_S0         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_b2_s0};                        end
+      BP_COEFF_A1_S0         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_a1_s0};                        end
+      BP_COEFF_A2_S0         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_a2_s0};                        end
+      BP_COEFF_B0_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_b0_s1};                        end
+      BP_COEFF_B1_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_b1_s1};                        end
+      BP_COEFF_B2_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_b2_s1};                        end
+      BP_COEFF_A1_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_a1_s1};                        end
+      BP_COEFF_A2_S1         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-25{1'b0}}, cfg_bp_coeff_a2_s1};                        end
       STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , daisy_slave, pll_locked}; end
 
       CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[1*16-1:0*16]};    end
@@ -611,6 +684,17 @@ assign cfg_filt_coeff_aa_o     = cfg_filt_coeff_aa;
 assign cfg_filt_coeff_bb_o     = cfg_filt_coeff_bb;
 assign cfg_filt_coeff_kk_o     = cfg_filt_coeff_kk;
 assign cfg_filt_coeff_pp_o     = cfg_filt_coeff_pp;
+
+assign cfg_bp_coeff_b0_s0_o    = cfg_bp_coeff_b0_s0;
+assign cfg_bp_coeff_b1_s0_o    = cfg_bp_coeff_b1_s0;
+assign cfg_bp_coeff_b2_s0_o    = cfg_bp_coeff_b2_s0;
+assign cfg_bp_coeff_a1_s0_o    = cfg_bp_coeff_a1_s0;
+assign cfg_bp_coeff_a2_s0_o    = cfg_bp_coeff_a2_s0;
+assign cfg_bp_coeff_b0_s1_o    = cfg_bp_coeff_b0_s1;
+assign cfg_bp_coeff_b1_s1_o    = cfg_bp_coeff_b1_s1;
+assign cfg_bp_coeff_b2_s1_o    = cfg_bp_coeff_b2_s1;
+assign cfg_bp_coeff_a1_s1_o    = cfg_bp_coeff_a1_s1;
+assign cfg_bp_coeff_a2_s1_o    = cfg_bp_coeff_a2_s1;
 
 assign cfg_dma_dst_addr1_o     = cfg_dma_dst_addr1;
 assign cfg_dma_dst_addr2_o     = cfg_dma_dst_addr2;

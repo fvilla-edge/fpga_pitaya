@@ -25,17 +25,20 @@
 // el diseño ideal y encaja justo en el puerto ancho del multiplicador
 // del DSP48E1 (25x18 bits).
 //
-// Sin registro AXI para cambiar coeficientes en caliente todavia - eso
-// se agrega mas adelante si hace falta ajustar el filtro sin recompilar.
+// Etapa 6 (RedPitaya-FPGA): coeficientes configurables por registro AXI
+// en caliente, sin recompilar - reemplaza los parametros de compilacion
+// de la Etapa 4c (ahora son puertos de entrada, wires). El default de
+// esos registros (en scope_cfg.sv) sigue siendo el pasabanda real
+// validado en la Etapa 4c, así que sin tocar nada desde software el
+// comportamiento es identico a antes - esto solo agrega la posibilidad
+// de cambiarlo. Motivado por una limitacion real encontrada en la 4c: el
+// filtro tenia los coeficientes fijos para decimacion 32 unicamente:
+// ahora el host puede recalcular y cargar coeficientes nuevos si usa
+// decimacion 64 (u otra banda), sin recompilar el bitstream.
 module bandpass_biquad #(
   parameter S_AXIS_DATA_BITS = 16,
   parameter COEFF_BITS       = 25,
-  parameter FRAC_BITS        = 20,
-  parameter signed [COEFF_BITS-1:0] COEFF_B0 = 0,
-  parameter signed [COEFF_BITS-1:0] COEFF_B1 = 0,
-  parameter signed [COEFF_BITS-1:0] COEFF_B2 = 0,
-  parameter signed [COEFF_BITS-1:0] COEFF_A1 = 0,
-  parameter signed [COEFF_BITS-1:0] COEFF_A2 = 0
+  parameter FRAC_BITS        = 20
 )(
   input  wire                             clk,
   input  wire                             rst_n,
@@ -46,7 +49,13 @@ module bandpass_biquad #(
   // Master AXI-S
   output reg  [S_AXIS_DATA_BITS-1:0]      m_axis_tdata,
   output wire                             m_axis_tvalid,
-  input  wire                             m_axis_tready
+  input  wire                             m_axis_tready,
+  // Coeficientes (Etapa 6: configurables, ver arriba)
+  input  wire signed [COEFF_BITS-1:0]     cfg_coeff_b0,
+  input  wire signed [COEFF_BITS-1:0]     cfg_coeff_b1,
+  input  wire signed [COEFF_BITS-1:0]     cfg_coeff_b2,
+  input  wire signed [COEFF_BITS-1:0]     cfg_coeff_a1,
+  input  wire signed [COEFF_BITS-1:0]     cfg_coeff_a2
 );
 
 wire signed [S_AXIS_DATA_BITS-1:0] din = s_axis_tdata;
@@ -76,11 +85,11 @@ end
 
 // productos: muestra (S_AXIS_DATA_BITS) * coeficiente (COEFF_BITS)
 localparam integer PROD_BITS = S_AXIS_DATA_BITS + COEFF_BITS;
-wire signed [PROD_BITS-1:0] prod_b0 = x0 * COEFF_B0;
-wire signed [PROD_BITS-1:0] prod_b1 = x1 * COEFF_B1;
-wire signed [PROD_BITS-1:0] prod_b2 = x2 * COEFF_B2;
-wire signed [PROD_BITS-1:0] prod_a1 = y1 * COEFF_A1;
-wire signed [PROD_BITS-1:0] prod_a2 = y2 * COEFF_A2;
+wire signed [PROD_BITS-1:0] prod_b0 = x0 * cfg_coeff_b0;
+wire signed [PROD_BITS-1:0] prod_b1 = x1 * cfg_coeff_b1;
+wire signed [PROD_BITS-1:0] prod_b2 = x2 * cfg_coeff_b2;
+wire signed [PROD_BITS-1:0] prod_a1 = y1 * cfg_coeff_a1;
+wire signed [PROD_BITS-1:0] prod_a2 = y2 * cfg_coeff_a2;
 
 // acumulador combinacional: 5 terminos de PROD_BITS, margen extra para
 // no desbordar en la suma (log2(5) ~ 3 bits)

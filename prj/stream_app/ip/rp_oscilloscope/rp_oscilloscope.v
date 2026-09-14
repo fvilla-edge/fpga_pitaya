@@ -244,6 +244,20 @@ wire [4*25-1:0]             cfg_filt_coeff_bb;
 wire [4*25-1:0]             cfg_filt_coeff_kk; 
 wire [4*25-1:0]             cfg_filt_coeff_pp; 
 
+// Etapa 6 (RedPitaya-FPGA): coeficientes del pasabanda de deteccion de
+// arena - COMPARTIDOS entre canales (no por canal como los de arriba,
+// decision para no duplicar a 20 registros; ver README)
+wire signed [25-1:0]        cfg_bp_coeff_b0_s0;
+wire signed [25-1:0]        cfg_bp_coeff_b1_s0;
+wire signed [25-1:0]        cfg_bp_coeff_b2_s0;
+wire signed [25-1:0]        cfg_bp_coeff_a1_s0;
+wire signed [25-1:0]        cfg_bp_coeff_a2_s0;
+wire signed [25-1:0]        cfg_bp_coeff_b0_s1;
+wire signed [25-1:0]        cfg_bp_coeff_b1_s1;
+wire signed [25-1:0]        cfg_bp_coeff_b2_s1;
+wire signed [25-1:0]        cfg_bp_coeff_a1_s1;
+wire signed [25-1:0]        cfg_bp_coeff_a2_s1;
+
 wire [4*32-1:0]             cfg_dma_dst_addr1;
 wire [4*32-1:0]             cfg_dma_dst_addr2;
 
@@ -458,6 +472,16 @@ scope_cfg #(
   .cfg_filt_coeff_bb_o      (cfg_filt_coeff_bb),
   .cfg_filt_coeff_kk_o      (cfg_filt_coeff_kk),
   .cfg_filt_coeff_pp_o      (cfg_filt_coeff_pp),
+  .cfg_bp_coeff_b0_s0_o     (cfg_bp_coeff_b0_s0),
+  .cfg_bp_coeff_b1_s0_o     (cfg_bp_coeff_b1_s0),
+  .cfg_bp_coeff_b2_s0_o     (cfg_bp_coeff_b2_s0),
+  .cfg_bp_coeff_a1_s0_o     (cfg_bp_coeff_a1_s0),
+  .cfg_bp_coeff_a2_s0_o     (cfg_bp_coeff_a2_s0),
+  .cfg_bp_coeff_b0_s1_o     (cfg_bp_coeff_b0_s1),
+  .cfg_bp_coeff_b1_s1_o     (cfg_bp_coeff_b1_s1),
+  .cfg_bp_coeff_b2_s1_o     (cfg_bp_coeff_b2_s1),
+  .cfg_bp_coeff_a1_s1_o     (cfg_bp_coeff_a1_s1),
+  .cfg_bp_coeff_a2_s1_o     (cfg_bp_coeff_a2_s1),
 
   .cfg_dma_dst_addr1_o      (cfg_dma_dst_addr1),
   .cfg_dma_dst_addr2_o      (cfg_dma_dst_addr2),
@@ -546,6 +570,16 @@ osc_top #(
   .cfg_filt_coeff_bb_i      (cfg_filt_coeff_bb[(GV+1)*25-1:GV*25]),
   .cfg_filt_coeff_kk_i      (cfg_filt_coeff_kk[(GV+1)*25-1:GV*25]),
   .cfg_filt_coeff_pp_i      (cfg_filt_coeff_pp[(GV+1)*25-1:GV*25]),
+  .cfg_bp_coeff_b0_s0_i     (cfg_bp_coeff_b0_s0),
+  .cfg_bp_coeff_b1_s0_i     (cfg_bp_coeff_b1_s0),
+  .cfg_bp_coeff_b2_s0_i     (cfg_bp_coeff_b2_s0),
+  .cfg_bp_coeff_a1_s0_i     (cfg_bp_coeff_a1_s0),
+  .cfg_bp_coeff_a2_s0_i     (cfg_bp_coeff_a2_s0),
+  .cfg_bp_coeff_b0_s1_i     (cfg_bp_coeff_b0_s1),
+  .cfg_bp_coeff_b1_s1_i     (cfg_bp_coeff_b1_s1),
+  .cfg_bp_coeff_b2_s1_i     (cfg_bp_coeff_b2_s1),
+  .cfg_bp_coeff_a1_s1_i     (cfg_bp_coeff_a1_s1),
+  .cfg_bp_coeff_a2_s1_i     (cfg_bp_coeff_a2_s1),
 
   .cfg_dma_sts_o            (cfg_dma_sts[(GV+1)*32-1:GV*32]),
   .cfg_dma_dst_addr1_i      (cfg_dma_dst_addr1[(GV+1)*32-1:GV*32]),

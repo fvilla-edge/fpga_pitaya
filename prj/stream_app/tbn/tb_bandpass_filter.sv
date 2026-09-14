@@ -33,7 +33,32 @@ module tb_bandpass_filter;
   wire [15:0] m_axis_tdata;
   wire        m_axis_tvalid;
 
+  // Etapa 6: los coeficientes ahora son puertos, no parametros - se
+  // fijan aca a los mismos valores validados en la Etapa 4c (default de
+  // los registros en scope_cfg.sv), para que este test siga probando lo
+  // mismo que antes.
+  reg signed [24:0] cfg_coeff_b0_s0 = 25'sd58743;
+  reg signed [24:0] cfg_coeff_b1_s0 = 25'sd117487;
+  reg signed [24:0] cfg_coeff_b2_s0 = 25'sd58743;
+  reg signed [24:0] cfg_coeff_a1_s0 = -25'sd1311029;
+  reg signed [24:0] cfg_coeff_a2_s0 = 25'sd526845;
+  reg signed [24:0] cfg_coeff_b0_s1 = 25'sd1048576;
+  reg signed [24:0] cfg_coeff_b1_s1 = -25'sd2097152;
+  reg signed [24:0] cfg_coeff_b2_s1 = 25'sd1048576;
+  reg signed [24:0] cfg_coeff_a1_s1 = -25'sd1984139;
+  reg signed [24:0] cfg_coeff_a2_s1 = 25'sd943367;
+
   bandpass_filter #(.S_AXIS_DATA_BITS(16)) dut (
+    .cfg_coeff_b0_s0 (cfg_coeff_b0_s0),
+    .cfg_coeff_b1_s0 (cfg_coeff_b1_s0),
+    .cfg_coeff_b2_s0 (cfg_coeff_b2_s0),
+    .cfg_coeff_a1_s0 (cfg_coeff_a1_s0),
+    .cfg_coeff_a2_s0 (cfg_coeff_a2_s0),
+    .cfg_coeff_b0_s1 (cfg_coeff_b0_s1),
+    .cfg_coeff_b1_s1 (cfg_coeff_b1_s1),
+    .cfg_coeff_b2_s1 (cfg_coeff_b2_s1),
+    .cfg_coeff_a1_s1 (cfg_coeff_a1_s1),
+    .cfg_coeff_a2_s1 (cfg_coeff_a2_s1),
     .clk           (clk),
     .rst_n         (rst_n),
     .s_axis_tdata  (s_axis_tdata),
@@ -86,6 +111,39 @@ module tb_bandpass_filter;
         end
       end
     end
+
+    // ------------------------------------------------------------------
+    // Etapa 6: reconfigurar los coeficientes EN CALIENTE (sin reset, sin
+    // recompilar) a ganancia unitaria en las 2 secciones, y confirmar
+    // que el filtro pasa a comportarse como un pasamanos - prueba que el
+    // camino de registro realmente cambia el comportamiento en runtime,
+    // no solo que compila con los valores default correctos.
+    // ------------------------------------------------------------------
+    cfg_coeff_b0_s0 = 25'sd1048576; cfg_coeff_b1_s0 = 0; cfg_coeff_b2_s0 = 0; cfg_coeff_a1_s0 = 0; cfg_coeff_a2_s0 = 0;
+    cfg_coeff_b0_s1 = 25'sd1048576; cfg_coeff_b1_s1 = 0; cfg_coeff_b2_s1 = 0; cfg_coeff_a1_s1 = 0; cfg_coeff_a2_s1 = 0;
+    repeat (10) @(posedge clk); // drenar el pipeline con los coeficientes viejos
+
+    for (i = 0; i < 20; i = i + 1) begin
+      @(negedge clk);
+      s_axis_tdata  = 1000 + i;
+      s_axis_tvalid = 1'b1;
+      @(posedge clk);
+      #1;
+    end
+    // seguir alimentando para poder leer las ultimas muestras ya filtradas
+    for (i = 0; i < LATENCY; i = i + 1) begin
+      @(negedge clk);
+      s_axis_tdata = 1000 + 20 + i;
+      @(posedge clk);
+      #1;
+      checks = checks + 1;
+      if (m_axis_tdata !== (1000 + 20 + i - LATENCY)) begin
+        errors = errors + 1;
+        $display("FAIL (reconfig runtime) @ %0t: salida=%0d, se esperaba=%0d",
+                  $time, $signed(m_axis_tdata), 1000 + 20 + i - LATENCY);
+      end
+    end
+    $display("Chequeo de reconfiguracion en caliente (ganancia unitaria): hecho.");
 
     $display("--------------------------------------------------------------");
     if (errors == 0)

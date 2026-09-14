@@ -51,6 +51,19 @@ module osc_top
   input  wire [              25-1:0]      cfg_filt_coeff_kk_i     ,
   input  wire [              25-1:0]      cfg_filt_coeff_pp_i     ,
 
+  // Etapa 6 (RedPitaya-FPGA): coeficientes configurables del pasabanda
+  // de deteccion de arena (bandpass_filter.v) - ver scope_cfg.sv
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b0_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b1_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b2_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a1_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a2_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b0_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b1_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b2_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a1_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a2_s1_i    ,
+
   input  wire [              32-1:0]      cfg_dma_dst_addr1_i ,
   input  wire [              32-1:0]      cfg_dma_dst_addr2_i ,
   input  wire [              32-1:0]      cfg_dma_buf_size_i      ,
@@ -337,7 +350,17 @@ bandpass_filter #(
   .s_axis_tready  (dec_tready),
   .m_axis_tdata   (bp_tdata),
   .m_axis_tvalid  (bp_tvalid),
-  .m_axis_tready  (bp_tready));
+  .m_axis_tready  (bp_tready),
+  .cfg_coeff_b0_s0 (cfg_bp_coeff_b0_s0_i),
+  .cfg_coeff_b1_s0 (cfg_bp_coeff_b1_s0_i),
+  .cfg_coeff_b2_s0 (cfg_bp_coeff_b2_s0_i),
+  .cfg_coeff_a1_s0 (cfg_bp_coeff_a1_s0_i),
+  .cfg_coeff_a2_s0 (cfg_bp_coeff_a2_s0_i),
+  .cfg_coeff_b0_s1 (cfg_bp_coeff_b0_s1_i),
+  .cfg_coeff_b1_s1 (cfg_bp_coeff_b1_s1_i),
+  .cfg_coeff_b2_s1 (cfg_bp_coeff_b2_s1_i),
+  .cfg_coeff_a1_s1 (cfg_bp_coeff_a1_s1_i),
+  .cfg_coeff_a2_s1 (cfg_bp_coeff_a2_s1_i));
 
 ////////////////////////////////////////////////////////////
 // Name : Trigger
