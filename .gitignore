@@ -8,6 +8,7 @@
 webtalk_pa.xml
 *.wdb
 vivado_pid*.str
+.vscode/
 *.jou
 *.log
 *usage_statistics_webtalk*

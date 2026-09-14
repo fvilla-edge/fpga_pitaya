@@ -138,12 +138,35 @@ tenerla.
       **Lo que esto NO prueba todavía:** que el contador de `osc_top.v` y
       el cableado de 4 canales en `rp_oscilloscope.v` lleguen bien hasta
       ahí (siguen sin simular) — pendiente real, ver plan de simulación.
-- [ ] **Etapa 3 — Filtro como "pasamanos" (bypass).** Insertar el bloque
+- [x] **Etapa 3 — Filtro como "pasamanos" (bypass).** Insertar el bloque
       del filtro en el lugar real del pipeline (antes de `osc_decimator`,
       junto a `osc_filter`), configurado para no filtrar nada (pasar la
       señal tal cual). Validar en **simulación** que los datos salen
       exactamente iguales que sin el bloque — prueba que encaja en el
-      lugar correcto sin romper el flujo de datos.
+      lugar correcto sin romper el flujo de datos. **Hecho
+      (2026-09-14):** el lugar real NO es "junto a `osc_filter`" como
+      decía el plan original — `osc_filter` corre sobre la señal SIN
+      calibrar, y el software siempre filtra sobre la señal ya calibrada.
+      Se insertó en cambio **después de `osc_calib` y antes del mux del
+      decimador**, misma señal que ve hoy el software. Módulo nuevo
+      `ip/rp_oscilloscope/bandpass_biquad.v` — por ahora puro pasamanos
+      combinacional (`assign`, sin registros, sin `cfg_bypass`; el
+      control por registro se agrega recién en la Etapa 4a, decisión
+      explícita del usuario para no sumar superficie antes de tiempo).
+      Validado en dos niveles: simulación standalone
+      (`etapa3_sim_bandpass.sh` + `tbn/tb_bandpass_biquad_passthrough.sv`,
+      200/200 checks con datos/valid/ready aleatorios — transparente en
+      todos los casos) y rebuild completo del bitstream
+      (`Bitgen Completed Successfully`, DRC 0 errores, mismo baseline de
+      warnings que la Etapa 2). **Gotcha real encontrado:** un archivo
+      `.v` nuevo en `ip/rp_oscilloscope/` NO alcanza con crearlo — esa
+      carpeta es un IP empaquetado por Vivado (formato IP-XACT,
+      `component.xml`) y hay que agregar el archivo a mano en la lista
+      de fuentes de `component.xml` (dos filesets: síntesis y
+      simulación) o el synth falla con
+      `module 'bandpass_biquad' not found`. Ya resuelto para este
+      archivo; va a volver a aparecer si la Etapa 4 agrega más archivos
+      nuevos al mismo IP — anotado en `COMPILAR.md`.
 - **Etapa 4 — Filtro real, biquad Direct Form I.** `osc_filter.v` NO es
       reusable tal cual (ver "Estudio del filtro existente" más abajo) —
       hace falta escribir un módulo biquad nuevo. Para no saltar directo

@@ -71,6 +71,18 @@ No valida el contador de `osc_top.v` ni el cableado completo de
 `rp_oscilloscope.v` todavía (ver plan en el README) — solo el
 decodificador de direcciones.
 
+**Simulación del bloque del filtro nuevo (Etapa 3, modo pasamanos):**
+```
+./etapa3_sim_bandpass.sh
+```
+Mismo estilo que la anterior (segundos, sin GUI). Prueba
+`bandpass_biquad.v` solo, con datos/valid/ready aleatorios durante 200
+ciclos, confirmando que es transparente (sale lo mismo que entra). Va a
+dejar de ser un simple "diff" cuando la Etapa 4 le agregue la matemática
+real del biquad — en ese momento el testbench cambia de "es igual a la
+entrada" a "coincide con lo que da `scipy.signal.lfilter` con los mismos
+coeficientes".
+
 ## Verificar que un build salió bien
 
 - El bitstream queda en `prj/stream_app/out/red_pitaya.bit`.
@@ -93,6 +105,32 @@ decodificador de direcciones.
   (la que usa Sand Monitoring). El default del Makefile es `Z20_G2`
   (otra placa) — **hay que pasarlo siempre a mano**, no confiar en el
   default.
+
+## Agregar un archivo `.v`/`.sv` NUEVO dentro de `ip/rp_oscilloscope/`
+
+No alcanza con crear el archivo — esa carpeta es un IP empaquetado por
+Vivado (formato IP-XACT: `component.xml`). Un archivo nuevo que no esté
+listado ahí da `ERROR: [Synth 8-439] module '<nombre>' not found`
+durante la síntesis, aunque el archivo exista y esté bien escrito.
+
+Hay que agregarlo a mano en **los dos filesets** de `component.xml`
+(síntesis y simulación — son dos bloques casi idénticos en el archivo),
+con una entrada como esta (mismo patrón que las demás):
+```xml
+<spirit:file>
+  <spirit:name>mi_modulo_nuevo.v</spirit:name>
+  <spirit:fileType>verilogSource</spirit:fileType>
+</spirit:file>
+```
+Para SystemVerilog (`.sv`) el `fileType` es `systemVerilogSource`. Si el
+archivo vive fuera de `ip/rp_oscilloscope/` (por ejemplo en `rtl/`), el
+`name` lleva la ruta relativa completa (ver las entradas existentes de
+`axi4_if.sv`/`axi4_slave.sv` como ejemplo).
+
+Modificar un archivo que YA está en esa lista (como se hizo en la Etapa
+2 con `osc_top.v`, `rp_oscilloscope.v`, `scope_cfg.sv`) no necesita
+tocar `component.xml` — esto solo aplica a archivos completamente
+nuevos.
 
 ## Cosas que van a sorprender si no se saben de antemano
 

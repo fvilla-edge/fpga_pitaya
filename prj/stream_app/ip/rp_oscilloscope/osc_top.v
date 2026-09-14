@@ -116,11 +116,15 @@ wire                        ctl_trg;
 
 wire [31:0]                 cfg_dma_diags;
 
-wire [S_AXIS_DATA_BITS-1:0] calib_tdata;   
-wire                        calib_tvalid;   
-wire                        calib_tready;   
+wire [S_AXIS_DATA_BITS-1:0] calib_tdata;
+wire                        calib_tvalid;
+wire                        calib_tready;
 
-wire [S_AXIS_DATA_BITS-1:0] dec_indata;    
+wire [S_AXIS_DATA_BITS-1:0] bp_tdata;
+wire                        bp_tvalid;
+wire                        bp_tready;
+
+wire [S_AXIS_DATA_BITS-1:0] dec_indata;
 wire [S_AXIS_DATA_BITS-1:0] dec_tdata;    
 wire                        dec_tvalid;   
 wire                        dec_tready;   
@@ -276,26 +280,42 @@ osc_calib #(
   .m_axis_tvalid    (calib_tvalid),
   .m_axis_tready    (calib_tready),
   // Config
-  .cfg_calib_offset (cfg_calib_offset_i), 
+  .cfg_calib_offset (cfg_calib_offset_i),
   .cfg_calib_gain   (cfg_calib_gain_i));
 
 ////////////////////////////////////////////////////////////
-// Name : Decimation
-// 
+// Name : Pasabanda (deteccion de arena) - Etapa 3 (RedPitaya-FPGA)
+//
 ////////////////////////////////////////////////////////////
-assign dec_indata = ramp_en      ? ramp_sig     : 
-                   (loopback_dac ? s_axis_tdata : calib_tdata);    
+bandpass_biquad #(
+  .S_AXIS_DATA_BITS (S_AXIS_DATA_BITS))
+  U_bandpass_biquad(
+  .clk            (clk_adc),
+  .rst_n          (rstn_fil),
+  .s_axis_tdata   (calib_tdata),
+  .s_axis_tvalid  (calib_tvalid),
+  .s_axis_tready  (calib_tready),
+  .m_axis_tdata   (bp_tdata),
+  .m_axis_tvalid  (bp_tvalid),
+  .m_axis_tready  (bp_tready));
+
+////////////////////////////////////////////////////////////
+// Name : Decimation
+//
+////////////////////////////////////////////////////////////
+assign dec_indata = ramp_en      ? ramp_sig     :
+                   (loopback_dac ? s_axis_tdata : bp_tdata);
 
 osc_decimator #(
-  .AXIS_DATA_BITS (S_AXIS_DATA_BITS), 
+  .AXIS_DATA_BITS (S_AXIS_DATA_BITS),
   .CNT_BITS       (17),
   .SHIFT_BITS     (4))
   U_osc_decimator(
-  .clk            (clk_adc),                   
-  .rst_n          (rstn_dec),        
-  .s_axis_tdata   (dec_indata),          
-  .s_axis_tvalid  (calib_tvalid),     
-  .s_axis_tready  (calib_tready),                                                                 
+  .clk            (clk_adc),
+  .rst_n          (rstn_dec),
+  .s_axis_tdata   (dec_indata),
+  .s_axis_tvalid  (bp_tvalid),
+  .s_axis_tready  (bp_tready),
   .m_axis_tdata   (dec_tdata),          
   .m_axis_tvalid  (dec_tvalid),    
   .m_axis_tready  (dec_tready),      
