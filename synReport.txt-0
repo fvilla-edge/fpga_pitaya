@@ -1,0 +1,70 @@
+# # # # # # # # # # # # # # # # # 
+#                               #
+# SYNTHESIS REPORT:             #
+#                               #
+# mar 30 jun 2026 09:22:21 -03 #  
+#                               #
+# # # # # # # # # # # # # # # # # 
+
+PASSED
+
+CRITICAL WARNINGs-----------------------------------------------------------------------------------
+
+WARNING: 50 CRITICAL WARNING timings detected:
+CRITICAL WARNING: [BD 41-759] The input pins (listed below) are either not connected or do not have a source port, and they don't have a tie-off specified. These pins are tied-off to all 0's to avoid error in Implementation flow.
+CRITICAL WARNING: [Constraints 18-1056] Clock 'daisy_clk' completely overrides clock 'rx_clk'.
+CRITICAL WARNING: [Constraints 18-513] set_false_path: list of objects specified for '-from' option contains no valid startpoints. Please check to make sure at least one valid startpoint is specified. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/prj/stream_app/sdc/red_pitaya.xdc:13]
+CRITICAL WARNING: [Constraints 18-513] set_false_path: list of objects specified for '-from' option contains no valid startpoints. Please check to make sure at least one valid startpoint is specified. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/prj/stream_app/sdc/red_pitaya.xdc:14]
+CRITICAL WARNING: [Designutils 20-1280] Could not find module 'asg_dat_fifo'. The XDC file /home/facu-edge/RedPitaya-FPGA-Release_2025.2/ip/asg_dat_fifo/asg_dat_fifo_clocks.xdc will not be read for any cell of this module.
+CRITICAL WARNING: [Designutils 20-1280] Could not find module 'asg_dat_fifo'. The XDC file /home/facu-edge/RedPitaya-FPGA-Release_2025.2/ip/asg_dat_fifo/asg_dat_fifo.xdc will not be read for any cell of this module.
+CRITICAL WARNING: [Designutils 20-1280] Could not find module 'sync_fifo'. The XDC file /home/facu-edge/RedPitaya-FPGA-Release_2025.2/ip/sync_fifo/sync_fifo_clocks.xdc will not be read for any cell of this module.
+CRITICAL WARNING: [Designutils 20-1280] Could not find module 'sync_fifo'. The XDC file /home/facu-edge/RedPitaya-FPGA-Release_2025.2/ip/sync_fifo/sync_fifo.xdc will not be read for any cell of this module.
+CRITICAL WARNING: [Place 30-722] Terminal 'dac_pwm_o[0]' has IOB constraint set to TRUE, but it is either not connected to a FLOP element or the connected FLOP element could not be brought into the I/O
+CRITICAL WARNING: [Place 30-722] Terminal 'dac_pwm_o[1]' has IOB constraint set to TRUE, but it is either not connected to a FLOP element or the connected FLOP element could not be brought into the I/O
+CRITICAL WARNING: [Place 30-722] Terminal 'dac_pwm_o[2]' has IOB constraint set to TRUE, but it is either not connected to a FLOP element or the connected FLOP element could not be brought into the I/O
+CRITICAL WARNING: [Place 30-722] Terminal 'dac_pwm_o[3]' has IOB constraint set to TRUE, but it is either not connected to a FLOP element or the connected FLOP element could not be brought into the I/O
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module axi4_if [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/interface/axi4_if.sv:149]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module axi4_lite_if [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/interface/axi4_lite_if.sv:100]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module axi4_slave [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/axi4_slave.sv:49]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module axi4_stream_cnt [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/axi4_stream_cnt.sv:7]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module axi4_stream_if [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/interface/axi4_stream_if.sv:61]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module axi4_stream_reg [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/axi4_stream_reg.sv:7]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module cts [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/cts.sv:7]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module div_add_sub_rad2 [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/divide.v:232]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module div_add_sub_rad4 [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/divide.v:284]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module div_add_sub_rad8 [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/divide.v:379]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module divide [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/divide.v:15]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module evn_pkg [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/evn_pkg.sv:17]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module gpio_if [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/interface/gpio_if.sv:24]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module la_trg [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/la_trg.sv:7]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module old_acq [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/old_acq.sv:7]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module rle [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/rle.sv:15]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module spi_if [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/interface/spi_if.sv:52]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module str_dec [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/str_dec.sv:7]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module sync_rw_single [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/sync_rw_single.v:15]
+CRITICAL WARNING: [Synth 8-2490] overwriting previous definition of module sys_bus_if [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/rtl/interface/sys_bus_if.sv:51]
+CRITICAL WARNING: [Vivado 12-1411] Cannot set LOC property of ports, Cannot place regular IO on system monitor or XADC site [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:137]
+CRITICAL WARNING: [Vivado 12-1411] Cannot set LOC property of ports, Cannot place regular IO on system monitor or XADC site [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:138]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports dac_clk_1x]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:206]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports dac_clk_2p]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:208]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports dac_clk_2x]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:207]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-from [get_clocks par_clk]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:216]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-from [get_clocks pll_adc_clk]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:213]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-from [get_clocks pll_adc_clk]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:225]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks dac_clk_1x]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:218]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks dac_clk_2p]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:212]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks dac_clk_2p]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:220]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks dac_clk_2p]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:224]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks dac_clk_2x]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:211]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks dac_clk_2x]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:219]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks dac_clk_2x]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:223]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks pdm_clk]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:222]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks pll_adc_clk]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:214]
+CRITICAL WARNING: [Vivado 12-4739] set_false_path:No valid object(s) found for '-to [get_clocks ser_clk]'. [/home/facu-edge/RedPitaya-FPGA-Release_2025.2/sdc/red_pitaya.xdc:221]
+
+ ----------------------------------------------------------------------------------------------------
+
+ERROR: file prj/v0.94/out/post_synth_timing_summary.rpt not found!
+ERROR: file prj/v0.94/out/post_place_timing_summary.rpt not found!
+ERROR: file prj/v0.94/out/post_route_timing_summary.rpt not found!
+PASSED

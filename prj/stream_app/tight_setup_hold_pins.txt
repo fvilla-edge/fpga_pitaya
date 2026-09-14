@@ -1,0 +1,33 @@
++--------------------------+--------------------------+----------------------------------------------------------------------------------------------------------+
+|       Launch Clock       |      Capture Clock       |                                                 Pin                                                      |
++--------------------------+--------------------------+----------------------------------------------------------------------------------------------------------+
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[3]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[3]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[2]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[5]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_a_o_reg[10]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[6]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[9]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[1]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_b_o_reg[10]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_b_o_reg[13]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_b_o_reg[11]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_b_o_reg[12]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[9]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_a_o_reg[11]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[2]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[8]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[1]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[4]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_a_o_reg[12]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[4]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[5]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[8]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[7]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[0]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[6]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                     dac_dat_a_o_reg[13]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_b_o_reg[7]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                      dac_dat_a_o_reg[0]/D|
+| clk_125_system_clk_gen_0 |           pll_dac_clk_1x |                                                                                             dac_rst_reg/D|
++--------------------------+--------------------------+----------------------------------------------------------------------------------------------------------+
