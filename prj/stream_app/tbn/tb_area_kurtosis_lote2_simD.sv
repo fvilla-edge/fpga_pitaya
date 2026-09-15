@@ -7,9 +7,10 @@
 // la confianza mas alla de un unico caso de cada tipo.
 //
 // Reusa la misma configuracion de osc_top.v (coeficientes reales,
-// ganancia real) y el mismo mecanismo de purga inicial para el
-// artefacto de X en power-up que tb_area_kurtosis_simD.sv - ver ese
-// archivo para el detalle de por que hace falta cada cosa.
+// ganancia real). Ya NO hace falta la corrida de purga inicial que tenia
+// esta etapa - causa raiz del artefacto de X en power-up encontrada y
+// arreglada en osc_decimator.v (m_axis_tdata/m_axis_tvalid sin
+// inicializar en su reset, ver comentario ahi).
 //
 module tb_area_kurtosis_lote2_simD;
 
@@ -135,12 +136,6 @@ module tb_area_kurtosis_lote2_simD;
   endtask
 
   initial begin
-    // purga inicial (mismo hallazgo que tb_area_kurtosis_simD.sv): la
-    // primera corrida tras el power-up de la simulacion queda con X en
-    // el biquad aunque rst_n ya este en 1 - se descarta.
-    $readmemh("../tbn/vectores/lote2_simD/stimulus_0.mem", mem_buf);
-    correr_ventana();
-
     for (p = 0; p < N_PARES; p = p + 1) begin
       $readmemh($sformatf("../tbn/vectores/lote2_simD/stimulus_%0d.mem", p), mem_buf);
       correr_ventana();

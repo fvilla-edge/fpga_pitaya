@@ -545,12 +545,12 @@ dos cosas conviven, son etapas de una escalera, no alternativas:
       toda la cadena real (`osc_calib`→`osc_decimator`→`bandpass_filter`
       →`area_kurtosis_accum`→`osc_trigger`→`osc_aquire`) elaborando
       junta por primera vez fuera del proyecto/IP-integrator de Vivado.
-      **Pendiente para cuando se retome esta escalera (no bloqueante):**
-      el acumulador de área/kurtosis quedó en `X` en esta corrida porque
-      el testbench nunca arma la captura (`event_ip_start`) — hay que
-      resolver esa secuencia de arranque antes de poder inyectar la
-      captura real en la Simulación D. Sigue sin probarse el cableado de
-      4 canales de `rp_oscilloscope.v`.
+      El acumulador de área/kurtosis quedó en `X` en esta corrida —
+      **hipótesis original (armar la captura con `event_ip_start`)
+      resultó equivocada; causa real encontrada y arreglada en la
+      Simulación D** (`osc_decimator.v` no inicializaba sus registros de
+      salida en el reset — ver esa sección). Sigue sin probarse el
+      cableado de 4 canales de `rp_oscilloscope.v`.
 - [x] **Simulación C — Sumar `rp_oscilloscope.v` completo (hecho
       2026-09-15, probado por el usuario).** Confirmado: la dependencia
       de IP de Xilinx ya estaba resuelta desde la B (mismo stub
@@ -599,14 +599,33 @@ dos cosas conviven, son etapas de una escalera, no alternativas:
          (calib→decimador→biquad×2) — el conteo nunca llegaba a
          completarse. Resuelto con una cola de relleno de 256 ciclos
          (dilución ≤0.13%, despreciable).
-      2. **Sin resolver del todo:** la primerísima corrida después del
-         power-up de la simulación (todo en `X` desde t=0) deja `y1`/`y2`
-         del primer biquad en `X` aunque `rst_n` ya esté en 1 (confirmado
-         con sondas jerárquicas). Es un artefacto de simulación (silicio
-         real arranca en un bit real, no en "indefinido"), no algo que
-         deba pasar en la placa — se esquivó con una corrida de "purga"
-         descartable antes de las dos que importan, en vez de inventar
-         una causa no confirmada.
+      2. **Causa raíz encontrada y arreglada (bug REAL de RTL, no solo un
+         artefacto de simulación).** La primerísima corrida después del
+         power-up de la simulación dejaba `y1`/`y2` del primer biquad en
+         `X` aunque `rst_n` ya estuviera en 1. Causa: en `osc_decimator.v`,
+         `m_axis_tdata`/`m_axis_tvalid` nunca se inicializaban en la rama
+         de reset (solo se les asigna dentro del `case` de la rama
+         normal) — quedaban en el valor de power-up hasta la primera
+         asignación real. `bandpass_biquad.v` captura su entrada
+         (`x0<=din`) **todos los ciclos, sin filtrar por `tvalid`**; en el
+         ciclo exacto en que el reset compartido se levanta, esa captura
+         lee el valor VIEJO (todavía sin inicializar) de la salida del
+         decimador — por las reglas de Verilog, todo lo disparado por el
+         mismo flanco ve el valor previo de los registros de los demás.
+         Una vez que ese valor entra al feedback del IIR, `X` se propaga
+         para siempre (nada lo puede "limpiar" salvo un reset real).
+         **En la placa real esto NO trabaría para siempre** (un bit de
+         power-up es un número real, no "veneno" como el `X` de
+         simulación) — pero sí produciría una salida corrupta transitoria
+         después de cada reset, hasta que ese valor arbitrario decaiga
+         por las propias características (estables) del filtro. Es un bug
+         real, chico pero real. **Arreglado:** agregado
+         `m_axis_tdata<='h0; m_axis_tvalid<=1'b0;` a la rama de reset de
+         `osc_decimator.v`. Confirmado que elimina la `X` desde la
+         primerísima corrida (ya no hace falta la corrida de "purga" que
+         tenían los testbenches de esta escalera) — corridas B/C/D
+         repetidas después del arreglo, mismos resultados (diferencias de
+         unas pocas cuentas sobre millones, despreciable).
       3. Copiado de la B, `cfg_calib_gain_i` estaba en 0 — en B no
          importaba (coeficientes ya en cero), pero acá es un
          multiplicador real que anulaba toda la señal. Corregido al

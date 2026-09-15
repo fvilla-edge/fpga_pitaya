@@ -125,6 +125,19 @@ if (rst_n == 1'b0 || ctl_rst) begin
    adc_sum   <= 32'h0 ;
    adc_dec_cnt <= 17'h0 ;
    adc_dv      <=  1'b0 ;
+   // Bug real encontrado en Simulacion D (sec.177, memoria del proyecto
+   // Sand Monitoring): m_axis_tdata/m_axis_tvalid nunca se inicializaban
+   // en reset (solo se escriben en el `case` de la rama normal, mas
+   // abajo). En la placa real esto deja esos registros en un valor de
+   // power-up indefinido; el bandpass_biquad rio abajo captura su
+   // entrada TODOS los ciclos (sin filtrar por tvalid), asi que ese
+   // valor arbitrario entra al feedback del IIR justo en el ciclo en que
+   // se levanta el reset. En simulacion se ve como X permanente en el
+   // filtro (confirmado con sondas jerarquicas); en silicio real seria
+   // una salida corrupta transitoria tras cada reset, no permanente
+   // (un bit de power-up es un numero real, no "veneno" como el X).
+   m_axis_tdata  <= 'h0 ;
+   m_axis_tvalid <= 1'b0 ;
 end else begin
   if (s_axis_tvalid) begin
     if (dec_valid) begin // start again or arm

@@ -199,19 +199,13 @@ module tb_area_kurtosis_simD;
     $readmemh("../tbn/vectores/stimulus_evento_simD.mem", mem_evento);
     $readmemh("../tbn/vectores/stimulus_reposo_simD.mem", mem_reposo);
 
-    // Hallazgo real de esta etapa: la PRIMERISIMA corrida tras el power-up
-    // de la simulacion (todos los reg en X desde t=0) deja el estado
-    // interno del biquad (y1/y2) en X incluso despues de que rst_n ya esta
-    // en 1 - confirmado con sondas jerarquicas (dut.U_bandpass_filter.
-    // U_seccion0.y1/y2). La SEGUNDA corrida (dentro de la misma
-    // simulacion, ya no arrancando desde el X de power-up) resetea limpio.
-    // No se investigo la causa exacta a fondo (candidato: alguna señal
-    // intermedia del camino osc_calib/osc_decimator que solo se limpia
-    // synchronous con datos ya circulando) - se resuelve con una corrida
-    // de "purga" descartable antes de las dos que importan, en vez de
-    // dejarlo sin resolver o inventar una causa no confirmada.
-    correr_ventana("PURGA (descartada)", 1'b0);
-
+    // La corrida de "purga" que hacia falta aca (la primerisima corrida
+    // tras el power-up de la simulacion dejaba el biquad en X aunque
+    // rst_n ya estuviera en 1) ya NO hace falta: causa raiz encontrada y
+    // arreglada en osc_decimator.v (m_axis_tdata/m_axis_tvalid sin
+    // inicializar en su reset, ver comentario ahi) - confirmado corriendo
+    // EVENTO como primera corrida real de la simulacion, sin purga
+    // previa, y da resultado limpio.
     correr_ventana("EVENTO", 1'b1);
     volcar_resultado("evento");
     correr_ventana("REPOSO", 1'b0);
