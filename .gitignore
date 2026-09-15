@@ -3,7 +3,7 @@
 **/.Xil/
 **/.hbs/
 **/sim/
-**/xsim_diag5/
+**/xsim_*/
 **/xsim.dir/
 webtalk_pa.xml
 *.wdb

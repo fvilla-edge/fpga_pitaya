@@ -526,23 +526,40 @@ dos cosas conviven, son etapas de una escalera, no alternativas:
       inventados en `diagN_i` — rápido y determinista, pero NO pasa por
       el contador real de `osc_top.v` ni por el cableado de canales de
       `rp_oscilloscope.v`.
-- [ ] **Simulación B — Sumar `osc_top.v` al mismo testbench standalone.**
-      En vez de alimentar `diag5_i` a mano, instanciar `osc_top.v`
-      (verificar primero que no tiene ninguna dependencia de IP de
-      Xilinx — a diferencia de `rp_oscilloscope.v`, no debería, ya que
-      el core FIFO Generator lo usan los bloques de DMA que viven un
-      nivel más arriba) y leer su `diag5_o` real. Prueba el contador +
-      el `assign` en `osc_top.v`, sigue sin probar el cableado de 4
-      canales en `rp_oscilloscope.v`.
-- [ ] **Simulación C — Sumar `rp_oscilloscope.v` completo.** Acá sí
-      aparece la dependencia real: sus bloques de DMA (`U_dma_s2mm`)
-      instancian un core Xilinx FIFO Generator vía catálogo de IP, que
-      no tiene un modelo de simulación como archivo de texto plano — hay
-      que generarlo (`generate_target simulation` sobre un proyecto
-      Vivado mínimo, no todo el block design) antes de poder compilarlo
-      con `xvlog`. Alternativa más rápida a evaluar: un stub/mock de
-      simulación de esos bloques de DMA si no son relevantes para lo que
-      se esté probando (el filtro/contador no los toca).
+- [x] **Simulación B — Sumar `osc_top.v` al mismo testbench standalone
+      (hecho 2026-09-15, probado por el usuario).** En vez de alimentar
+      `diag5_i` a mano, se instanció `osc_top.v` real y se leyó su
+      `diag5_o` real. **El supuesto de la Simulación A resultó falso:**
+      la dependencia de IP de Xilinx (`fifo_axi_data`, FIFO Generator sin
+      modelo de simulación en texto plano) no vive un nivel arriba en
+      `rp_oscilloscope.v` — `rp_dma_s2mm.v` (el módulo que la usa) está
+      instanciado **directamente dentro de `osc_top.v`**, así que ya acá
+      hizo falta resolverla. Se mockeó con un stub nuevo
+      (`prj/stream_app/tbn/sim_stub_rp_dma_s2mm.sv`, mismos puertos, sin
+      tocar el RTL real de síntesis) en vez de generar la IP real, porque
+      el DMA hacia DDR es irrelevante para lo que prueba esta etapa.
+      Aparte, `osc_decimator.v` usa `divide.v` (RTL real en `rtl/`, no una
+      IP de Xilinx) que solo faltaba agregar a la lista de compilación.
+      Testbench: `prj/stream_app/tbn/tb_osc_top_simB.sv`, script:
+      `etapa_simB_osc_top.sh`. Prueba el contador + el `assign` +
+      toda la cadena real (`osc_calib`→`osc_decimator`→`bandpass_filter`
+      →`area_kurtosis_accum`→`osc_trigger`→`osc_aquire`) elaborando
+      junta por primera vez fuera del proyecto/IP-integrator de Vivado.
+      **Pendiente para cuando se retome esta escalera (no bloqueante):**
+      el acumulador de área/kurtosis quedó en `X` en esta corrida porque
+      el testbench nunca arma la captura (`event_ip_start`) — hay que
+      resolver esa secuencia de arranque antes de poder inyectar la
+      captura real en la Simulación D. Sigue sin probarse el cableado de
+      4 canales de `rp_oscilloscope.v`.
+- [ ] **Simulación C — Sumar `rp_oscilloscope.v` completo.**
+      **Corrección al plan original:** la dependencia de IP de Xilinx que
+      esta etapa esperaba encontrar ya se resolvió en la B (vivía en
+      `osc_top.v`, no acá). Lo que `rp_oscilloscope.v` agrega de verdad
+      sobre `osc_top.v` es más chico de lo que se pensaba: `scope_cfg.sv`
+      (ya probado solo en la Simulación A) + un `generate` (`U_osc2`) que
+      instancia `osc_top.v` una vez por canal. Sin dependencia de IP de
+      Xilinx propia, a confirmar generando/leyendo la señal real. Prueba
+      el cableado multi-canal real, que ni A ni B probaron.
 - [ ] **Simulación D — Arreglar el flujo completo del SoC (`make sim`
       real).** Escribir el `top_tb` que falta para `stream_app`+Z10,
       usando `system_model.sv` (el modelo de comportamiento de la PS que
