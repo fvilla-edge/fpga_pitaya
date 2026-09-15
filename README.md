@@ -551,15 +551,25 @@ dos cosas conviven, son etapas de una escalera, no alternativas:
       resolver esa secuencia de arranque antes de poder inyectar la
       captura real en la Simulación D. Sigue sin probarse el cableado de
       4 canales de `rp_oscilloscope.v`.
-- [ ] **Simulación C — Sumar `rp_oscilloscope.v` completo.**
-      **Corrección al plan original:** la dependencia de IP de Xilinx que
-      esta etapa esperaba encontrar ya se resolvió en la B (vivía en
-      `osc_top.v`, no acá). Lo que `rp_oscilloscope.v` agrega de verdad
-      sobre `osc_top.v` es más chico de lo que se pensaba: `scope_cfg.sv`
-      (ya probado solo en la Simulación A) + un `generate` (`U_osc2`) que
-      instancia `osc_top.v` una vez por canal. Sin dependencia de IP de
-      Xilinx propia, a confirmar generando/leyendo la señal real. Prueba
-      el cableado multi-canal real, que ni A ni B probaron.
+- [x] **Simulación C — Sumar `rp_oscilloscope.v` completo (hecho
+      2026-09-15, probado por el usuario).** Confirmado: la dependencia
+      de IP de Xilinx ya estaba resuelta desde la B (mismo stub
+      reusado tal cual, sin cambios). Se instanció `rp_oscilloscope.v`
+      con `NUM_CHANNELS=2` (la configuración real de la placa) y se
+      probó que el `generate` arma dos `osc_top.v` de verdad
+      independientes: canal 0 leído por el registro AXI real (offset
+      0xF0, el mismo camino que usaría software real), canal 1 leído
+      por referencia jerárquica del testbench (no tiene registro AXI
+      propio, decisión ya tomada en etapas anteriores) — dieron valores
+      *distintos* (`0x7da` vs `0x7e5`), confirmando que no es el mismo
+      dato aliasado dos veces. Testbench:
+      `prj/stream_app/tbn/tb_rp_oscilloscope_simC.sv`, script:
+      `etapa_simC_osc_scope.sh`. 2 checks, 0 errores.
+      **Warnings nuevos, sin acción (código del vendor, no del filtro):**
+      `osc_trig_op` índice fuera de rango en `rp_oscilloscope.v:306-307`
+      — cableado muerto de las salidas de trigger de los canales 3/4,
+      que nunca se instancian con `NUM_CHANNELS=2`. Mismo criterio que
+      los warnings ya anotados en la B.
 - [ ] **Simulación D — Arreglar el flujo completo del SoC (`make sim`
       real).** Escribir el `top_tb` que falta para `stream_app`+Z10,
       usando `system_model.sv` (el modelo de comportamiento de la PS que
