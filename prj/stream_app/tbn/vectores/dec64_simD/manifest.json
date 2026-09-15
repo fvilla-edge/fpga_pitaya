@@ -1,0 +1,23 @@
+[
+  {
+    "idx": 0,
+    "etiqueta": "evento_fuerte_dec64",
+    "archivo": "42_1_reposo_20260903_164703_mono_dec64",
+    "kurtosis_sw": 99.56542205810547,
+    "clasificacion": "evento"
+  },
+  {
+    "idx": 1,
+    "etiqueta": "evento_moderado_dec64",
+    "archivo": "42_1_reposo_20260903_164536_mono_dec64",
+    "kurtosis_sw": 28.11421012878418,
+    "clasificacion": "evento"
+  },
+  {
+    "idx": 2,
+    "etiqueta": "reposo_dec64",
+    "archivo": "42_1_reposo_20260903_164209_mono_dec64",
+    "kurtosis_sw": 2.9624292850494385,
+    "clasificacion": "reposo"
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "area": 0.9982428395309791,
+  "kurtosis": 99.56542953143291,
+  "kurtosis_scipy": 99.56542205810547,
+  "ventana_indice": 55,
+  "clasificacion": "evento",
+  "archivo": "42_1_reposo_20260903_164703_mono_dec64",
+  "etiqueta": "evento_fuerte_dec64"
+}

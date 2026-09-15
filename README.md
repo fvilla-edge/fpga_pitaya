@@ -658,6 +658,38 @@ dos cosas conviven, son etapas de una escalera, no alternativas:
       comparar punto fijo contra punto flotante cerca de un umbral, y
       queda anotado para no sobre-confiar.
 
+- [x] **Simulación D (dec64) — mostrar y resolver la limitación de
+      decimación fija con datos reales, hecho 2026-09-15, probado por el
+      usuario.** Primero se corrieron 3 ventanas reales de `lote3_mono`
+      (dec64, fs=1953125Hz) contra el filtro SIN tocar (coeficientes de
+      dec32) a propósito, para ver la limitación conocida con datos
+      reales en vez de solo en teoría — testbench
+      `tbn/tb_area_kurtosis_dec64_simD.sv`, script
+      `etapa_simD_dec64.sh`. **Resultado más chico de lo esperado:**
+      3/3 clasificaciones igual coincidieron, con 4.2-4.6% de diferencia
+      de magnitud (contra ~1-2% de los casos con coeficientes
+      correctos) — un impacto de arena es un transitorio de banda ancha,
+      así que el corrimiento de banda (efectivo 25-200kHz en vez de
+      50-400kHz) sigue capturando bastante energía del impacto. No es
+      evidencia de que la limitación "no importa" en general, solo que
+      estos 3 casos puntuales no cruzaron la clasificación.
+
+      Igualmente, como el hardware no necesita una versión nueva para
+      esto (los coeficientes son registros de la Etapa 6, no están
+      fijos en la síntesis), se calculó y validó un segundo juego real
+      para dec64: `tbn/vectores/generar_coefs_dec64.py` (mismo método
+      exacto que `generar_etapa4c.py`, `FS=1953125` en vez de
+      `3906250`) — respuesta en frecuencia dentro de 0.01-0.10dB del
+      ideal (mejor que el juego de dec32), sin limit-cycle problemático
+      (-68.7dBFS). Probado contra las mismas 3 ventanas reales
+      (`tbn/tb_area_kurtosis_dec64corr_simD.sv`, script
+      `etapa_simD_dec64corr.sh`): la diferencia bajó de 4.2-4.6% a
+      **0.1-0.5%**, igualando la calidad del juego de dec32. Confirma
+      que la limitación se resuelve por configuración (escribir otro
+      juego de 10 registros según la decimación activa), no por
+      hardware — pendiente real: automatizar en software cuál juego
+      escribir según `cfg_dec_factor`, no implementado todavía.
+
 **Cómo no perderse en esto:** cada simulación nueva se prueba SOLA
 primero (correr el script, ver que compila y corre, revisar los
 resultados) antes de sumarle la siguiente pieza — mismo espíritu que las
