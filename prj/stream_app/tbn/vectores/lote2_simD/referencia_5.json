@@ -1,0 +1,12 @@
+{
+  "area": 0.4461599549318848,
+  "kurtosis": 4.997213137751036,
+  "sum_abs": 1742812,
+  "sum_x2": 26217672,
+  "sum_x4": 17586814951,
+  "kurtosis_scipy": 4.9972124099731445,
+  "ventana_indice": 23,
+  "clasificacion": "reposo",
+  "archivo": "42_1_reposo_20260903_145351_mono_dec32",
+  "etiqueta": "reposo_cerca_umbral"
+}

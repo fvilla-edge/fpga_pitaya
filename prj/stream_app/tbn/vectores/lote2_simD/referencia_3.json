@@ -1,0 +1,12 @@
+{
+  "area": 0.4065035416482355,
+  "kurtosis": 3.0300543891430194,
+  "sum_abs": 1587904,
+  "sum_x2": 20309194,
+  "sum_x4": 6398922937,
+  "kurtosis_scipy": 3.030054807662964,
+  "ventana_indice": 244,
+  "clasificacion": "reposo",
+  "archivo": "42_1_reposo_20260903_143628_mono_dec32",
+  "etiqueta": "reposo1"
+}

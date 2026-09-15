@@ -623,6 +623,41 @@ dos cosas conviven, son etapas de una escalera, no alternativas:
       nuevas. Primera vez que el RTL real (no un modelo Python) se valida
       de punta a punta contra un evento de arena real.
 
+- [x] **Simulación D (extensión, muestreo más amplio) — hecho 2026-09-15,
+      probado por el usuario.** Se escanearon los 3 lotes reales de
+      `~/datos/Dia miercoles 3 de Sept` (fuera de este repo y de Sand
+      Monitoring, en la máquina local) con el mismo criterio de
+      clasificación que el software: `lote1_mono` (dec32, 26 sesiones)
+      tiene muchos eventos reales, algunas sesiones con >100 ventanas
+      sobre el umbral y kurtosis hasta 221. `lote2_dual` y `lote3_mono`
+      están grabados en **dec64** — no se corrieron contra el filtro de
+      HW (coeficientes fijos para dec32, limitación ya conocida más
+      arriba: correrlos daría un corrimiento de banda esperado, no una
+      falla nueva; queda pendiente si se quiere el dato igual).
+
+      Se eligieron 6 ventanas más de `lote1_mono` a propósito diversas
+      (evento fuerte, dos moderados, dos reposo limpios, uno de reposo
+      pero el más cercano al umbral encontrado) y se corrieron contra el
+      mismo `osc_top.v` de la Simulación D. Extracción:
+      `tbn/vectores/extraer_lote_simD2.py`, testbench:
+      `tbn/tb_area_kurtosis_lote2_simD.sv`, script:
+      `etapa_simD_lote2.sh`, comparación:
+      `tbn/vectores/comparar_lote2_simD.py`.
+
+      **Resultado: 8/8 clasificaciones coinciden** (los 6 nuevos + los 2
+      originales) entre HW simulado y software, sobre datos reales
+      diversos. Diferencia de magnitud de kurtosis: ~1-2% en los casos
+      extremos (evento fuerte, reposo bien limpio), pero sube a ~20-25%
+      en los casos cerca del umbral (6.0) — **el software es la
+      referencia numéricamente exacta (float64), el hardware es una
+      aproximación de punto fijo (25 bits, redondeo, saturación)
+      diseñada para acercarse a esa referencia, no al revés**. En estos
+      8 casos la clasificación nunca cambió, pero un evento real MUY al
+      límite (kurtosis de software entre ~5 y ~7) tiene riesgo genuino de
+      que HW y software no coincidan — no es una falla, es inherente a
+      comparar punto fijo contra punto flotante cerca de un umbral, y
+      queda anotado para no sobre-confiar.
+
 **Cómo no perderse en esto:** cada simulación nueva se prueba SOLA
 primero (correr el script, ver que compila y corre, revisar los
 resultados) antes de sumarle la siguiente pieza — mismo espíritu que las

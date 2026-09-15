@@ -1,0 +1,44 @@
+[
+  {
+    "idx": 0,
+    "etiqueta": "evento_fuerte",
+    "archivo": "42_1_reposo_20260903_144456_mono_dec32",
+    "kurtosis_sw": 221.10755920410156,
+    "clasificacion": "evento"
+  },
+  {
+    "idx": 1,
+    "etiqueta": "evento_moderado",
+    "archivo": "42_1_reposo_20260903_144128_mono_dec32",
+    "kurtosis_sw": 14.202826499938965,
+    "clasificacion": "evento"
+  },
+  {
+    "idx": 2,
+    "etiqueta": "evento_moderado2",
+    "archivo": "42_1_reposo_20260903_143859_mono_dec32",
+    "kurtosis_sw": 12.82075023651123,
+    "clasificacion": "evento"
+  },
+  {
+    "idx": 3,
+    "etiqueta": "reposo1",
+    "archivo": "42_1_reposo_20260903_143628_mono_dec32",
+    "kurtosis_sw": 3.030054807662964,
+    "clasificacion": "reposo"
+  },
+  {
+    "idx": 4,
+    "etiqueta": "reposo2",
+    "archivo": "42_1_reposo_20260903_143720_mono_dec32",
+    "kurtosis_sw": 3.0134148597717285,
+    "clasificacion": "reposo"
+  },
+  {
+    "idx": 5,
+    "etiqueta": "reposo_cerca_umbral",
+    "archivo": "42_1_reposo_20260903_145351_mono_dec32",
+    "kurtosis_sw": 4.9972124099731445,
+    "clasificacion": "reposo"
+  }
+]
