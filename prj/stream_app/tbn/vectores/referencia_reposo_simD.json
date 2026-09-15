@@ -1,0 +1,10 @@
+{
+  "area": 0.41340983777510953,
+  "kurtosis": 3.031200992036995,
+  "sum_abs": 1614882,
+  "sum_x2": 20975057,
+  "sum_x4": 6827977578,
+  "kurtosis_scipy_bias_true": 3.031200885772705,
+  "ventana_indice": 37,
+  "clasificacion": "reposo"
+}

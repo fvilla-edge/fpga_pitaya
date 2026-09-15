@@ -1,0 +1,10 @@
+{
+  "area": 0.9433847582514117,
+  "kurtosis": 35.03036590411409,
+  "sum_abs": 3685097,
+  "sum_x2": 307769004,
+  "sum_x4": 16988909611560,
+  "kurtosis_scipy_bias_true": 35.0303840637207,
+  "ventana_indice": 168,
+  "clasificacion": "evento"
+}

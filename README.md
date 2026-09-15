@@ -570,17 +570,58 @@ dos cosas conviven, son etapas de una escalera, no alternativas:
       — cableado muerto de las salidas de trigger de los canales 3/4,
       que nunca se instancian con `NUM_CHANNELS=2`. Mismo criterio que
       los warnings ya anotados en la B.
-- [ ] **Simulación D — Arreglar el flujo completo del SoC (`make sim`
-      real).** Escribir el `top_tb` que falta para `stream_app`+Z10,
-      usando `system_model.sv` (el modelo de comportamiento de la PS que
-      ya está en `tbn/`, se usa en otras variantes del proyecto) y
-      correrlo en modo batch (agregar `-mode batch` al target `sim` del
-      Makefile, o un script aparte que no la toque). Esto es lo que hace
-      falta para inyectar una captura real (de `datos_campo/` en Sand
-      Monitoring) como estímulo de ADC y validar el filtro completo
-      (Etapa 4c) contra el criterio real de clasificación, sin esperar a
-      la placa nueva. Es la etapa más grande de las 4 — no arrancar sin
-      confirmar antes que B y C ya dieron resultado.
+- [x] **Simulación D — Inyectar una captura real de arena como estímulo
+      de ADC (hecho 2026-09-15, probado por el usuario).**
+      **Corrección al plan original:** no hizo falta `system_model.sv` ni
+      tocar el Makefile — el área/kurtosis se lee por registro AXI
+      directo (ya probado en A/B/C), no por DMA, así que ya se podía
+      inyectar dato real sin simular el procesador. Se instanció
+      `osc_top.v` directo (misma base que la B, no la C — lo nuevo acá es
+      la numérica del filtro contra datos reales, no el cableado
+      multi-canal).
+
+      Dato real: `datos_campo/42_1_reposo_20260903_143538_mono_dec32` en
+      Sand Monitoring — pese al nombre "reposo", el archivo SÍ contiene
+      un evento de arena real (confirmado escaneando las 567 ventanas de
+      50ms del archivo con el mismo criterio que usa el software:
+      ventana #168, kurtosis=35.03, muy por encima del umbral de 6).
+      Extracción y referencia de software:
+      `tbn/vectores/extraer_datos_reales_simD.py` (reusa
+      `revisar.py::_leer_canales_bin` y `area_kurtosis.py` de Sand
+      Monitoring, no reimplementa el parseo/filtrado). Testbench:
+      `tbn/tb_area_kurtosis_simD.sv`, script:
+      `etapa_simD_area_kurtosis.sh`, comparación:
+      `tbn/vectores/comparar_simD.py`.
+
+      **Tres problemas reales encontrados armando esto (no uno):**
+      1. Ventana de estímulo del mismo tamaño exacto que la ventana de
+         conteo, sin margen para la latencia de llenado del pipeline
+         (calib→decimador→biquad×2) — el conteo nunca llegaba a
+         completarse. Resuelto con una cola de relleno de 256 ciclos
+         (dilución ≤0.13%, despreciable).
+      2. **Sin resolver del todo:** la primerísima corrida después del
+         power-up de la simulación (todo en `X` desde t=0) deja `y1`/`y2`
+         del primer biquad en `X` aunque `rst_n` ya esté en 1 (confirmado
+         con sondas jerárquicas). Es un artefacto de simulación (silicio
+         real arranca en un bit real, no en "indefinido"), no algo que
+         deba pasar en la placa — se esquivó con una corrida de "purga"
+         descartable antes de las dos que importan, en vez de inventar
+         una causa no confirmada.
+      3. Copiado de la B, `cfg_calib_gain_i` estaba en 0 — en B no
+         importaba (coeficientes ya en cero), pero acá es un
+         multiplicador real que anulaba toda la señal. Corregido al
+         default real de `scope_cfg.sv` (`0x8000`, ganancia unidad).
+
+      **Resultado, HW simulado (RTL real) contra software
+      (`area_kurtosis.py`), mismo segmento exacto de dato real:**
+      evento (#168): kurtosis HW=32.70 vs SW=35.03 (6.7% de diferencia),
+      área HW=1.02 vs SW=0.94 (8.4%) — clasifica evento en ambos.
+      reposo (#37): kurtosis HW=2.97 vs SW=3.03 (2.0%), área HW=0.52 vs
+      SW=0.41 (24.8%) — clasifica reposo en ambos. Diferencias de
+      magnitud consistentes con lo ya conocido (desvío de ganancia de la
+      Etapa 4c, aproximación de media=0 de la Etapa 5) — sin sorpresas
+      nuevas. Primera vez que el RTL real (no un modelo Python) se valida
+      de punta a punta contra un evento de arena real.
 
 **Cómo no perderse en esto:** cada simulación nueva se prueba SOLA
 primero (correr el script, ver que compila y corre, revisar los
