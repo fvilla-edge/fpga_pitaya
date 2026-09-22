@@ -862,7 +862,50 @@ causa real de una hora perdida en la sesión del 2026-09-22 (las capturas fallab
 `RuntimeError: No se genero archivo de salida en SD` porque apuntaban a un `.dtbo`
 inexistente, no por nada del kernel ni de la placa).
 
-### 5. Si algo deja al kernel en un estado raro (reintentos de firmware en `dmesg`)
+### 5. Despliegue seguro (checksum + staging + backup + rollback) — `desplegar_bitstream.sh`
+
+Los pasos 1-3 de arriba se pueden hacer a mano, pero para no repetir errores (y para el caso
+real de desplegar a través de un enlace no confiable, ej. Starlink a la placa de campo) hay
+dos scripts en la raíz de este repo, **probados de punta a punta en `rp-f0fd8c` el
+2026-09-22** (caso normal, corte de conexión real a mitad de transferencia, y rollback):
+
+```bash
+./desplegar_bitstream.sh prj/stream_app/out/red_pitaya.bit.bin <IP_placa> stream_app
+./revertir_bitstream.sh <IP_placa> stream_app   # si algo salió mal
+```
+
+**Qué hace `desplegar_bitstream.sh`, y por qué en ese orden:**
+1. Calcula el checksum (`sha256sum`) del archivo LOCAL, antes de mandar nada.
+2. Transfiere a una ruta de **staging** (`/root/staging_<nombre>.bin.partial`) — nunca
+   directo al destino activo (`/opt/<nombre>/fpga.bin`).
+3. Verifica el checksum del archivo YA TRANSFERIDO en la placa contra el local. Si no
+   coincide, borra el staging y **aborta sin tocar nada activo**.
+4. Recién si coincide: hace backup del bitstream custom anterior (si había uno,
+   `fpga.bin.bak_<timestamp UTC>`) y activa el nuevo.
+
+**Por qué esto alcanza para el caso de un corte de Starlink a mitad de transferencia (probado
+de verdad, no solo en teoría):** se interrumpió un `scp` real de un archivo de 500MB a mitad
+de camino (mismo mecanismo que un corte de enlace real) — el staging quedó con un archivo
+truncado (11.7MB de los 500MB esperados) y `set -e` cortó el script ahí mismo, **antes** de
+llegar siquiera a la verificación de checksum. El destino activo (`/opt/<nombre>/fpga.bin`)
+quedó exactamente igual que antes, confirmado por checksum. Para el caso más raro de una
+transferencia que el `scp` reporta como exitosa pero llega corrupta igual (bit flip, no un
+corte franco), la verificación de checksum del paso 3 es la que lo atrapa — confirmado
+comparando a mano el checksum de un archivo truncado contra el original: la comparación
+detecta la diferencia sin falsos negativos.
+
+**Rollback:** `revertir_bitstream.sh` busca el `fpga.bin.bak_*` más reciente en
+`/opt/<nombre>/` y lo restaura como `fpga.bin` — probado, restaura bien. No hace falta
+recordar el nombre exacto del backup.
+
+**Limitación real, no resuelta por estos scripts:** ninguno de los dos activa el bitstream
+en la FPGA — solo dejan el archivo correcto en disco. El paso de `overlay.sh <nombre> <flag>`
+(recarga en caliente, real en la placa) sigue siendo manual a propósito, para no reprogramar
+la FPGA a ciegas apenas termina una transferencia — dejar ese paso como una decisión
+explícita y separada (y, en la placa de campo, coordinada con que no haya una captura
+activa en ese momento).
+
+### 6. Si algo deja al kernel en un estado raro (reintentos de firmware en `dmesg`)
 
 Un intento fallido con 3 argumentos (ver punto 2) puede dejar al kernel reintentando un
 `request_firmware` de `fpga.dtbo` periódicamente en el fondo (visible como `(NULL device *):
@@ -875,19 +918,21 @@ systemd-run --on-active=2s systemctl reboot --force --force
 ```
 (desacoplado de la sesión SSH que lo dispara, se dispara solo 2s después).
 
-### 6. Checklist rápido para la próxima vez
+### 7. Checklist rápido para la próxima vez
 
 1. `make ... red_pitaya.bit` (borrar el `.bit` viejo primero si Make dice "actualizado").
 2. `make ... red_pitaya.bit.bin` (bootgen — el archivo que realmente se usa).
-3. Copiar ese `.bit.bin` a `/opt/<nombre>/fpga.bin` en la placa (no a `/opt/redpitaya/...`).
+3. `./desplegar_bitstream.sh prj/stream_app/out/red_pitaya.bit.bin <IP_placa> <nombre>`
+   (checksum + staging + backup, no pisa nada a ciegas).
 4. `overlay.sh <nombre> <flag>` (2 argumentos, nunca 3 salvo que haga falta un `.dtbo`
-   distinto de verdad).
+   distinto de verdad) — este paso de activación queda manual a propósito, ver punto 5.
 5. Confirmar con `monitor 0x400000F0` (o el registro que corresponda) que cambió de verdad.
 6. Si se quiere que `capturar_stream.py` use el bitstream nuevo: parchear la línea de
    `overlay.sh` en `campo_common.py` (con backup), no tocar `/opt/redpitaya`.
-7. Para volver al bitstream default: revertir el patch de `campo_common.py` (`cp
-   campo_common.py.bak_... campo_common.py`) — el default de `/opt/redpitaya` nunca se tocó,
-   así que no hace falta restaurar nada ahí.
+7. Para volver al bitstream anterior: `./revertir_bitstream.sh <IP_placa> <nombre>`. Para
+   volver al patch de `campo_common.py` a su version original: `cp campo_common.py.bak_...
+   campo_common.py` — el default de `/opt/redpitaya` nunca se tocó, así que no hace falta
+   restaurar nada ahí.
 
 ## Referencias
 
