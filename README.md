@@ -482,13 +482,68 @@ corriendo a mayor frecuencia — no evaluado todavía).
       algunas multiplicaciones sin usar DSP48 real; con coeficientes
       variables por registro ya no puede, cada multiplicación necesita
       su propio DSP48 real).
-- [ ] **Etapa 7 — Primera prueba en la placa nueva, cuando llegue.**
-      Primero confirmar que la captura/`rpsa_client` que YA funciona sigue
-      andando igual con el bitstream nuevo, ANTES de mirar si el filtro
-      nuevo da resultados correctos.
-- [ ] **Etapa 8 — Validación con datos reales en la placa nueva**,
-      comparando contra el pipeline de software (mismo criterio de
-      coincidencia de clasificación usado en el resto del proyecto).
+- [x] **Etapa 7 — Primera prueba en la placa nueva. Hecho (2026-09-22,
+      `rp-f0fd8c`).** Antes de flashear se re-corrieron
+      `etapa4c_sim_bandpass.sh`/`etapa_simD_area_kurtosis.sh`/
+      `etapa_simD_lote2.sh` (sin regresión del fix de `osc_decimator.v`
+      de la sesión anterior, 8/8 clasificaciones) y se recompiló desde
+      HEAD (el `.bit` que había en `out/` era de un día antes de ese fix
+      — Make no lo detecta solo por timestamp, hay que borrar el `.bit`
+      viejo a mano para forzar el rebuild). Confirmado con `DIAG_REG5`
+      (Etapa 2) dando lecturas distintas en 1s: el diseño nuevo corre de
+      verdad en silicio, primera vez en este proyecto. Con el bitstream
+      nuevo activo: 3 capturas de sanidad reales espaciadas 60s, 93% de
+      eficiencia las 3, sin errores — `rpsa_client`/`capturar_stream.py`
+      siguen andando igual. **Ver sección "Cómo cargar un bitstream
+      nuevo en la placa" más abajo — hubo 2 bugs reales del vendor en el
+      camino, necesarios para repetir esto en el futuro sin perder otra
+      sesión entera redescubriéndolos.**
+- [x] **Etapa 8 — Validación con datos reales en la placa nueva. Hecho
+      (2026-09-22, `rp-f0fd8c`).** Se implementó `LectorRegistrosHW` en
+      `analisis/placa/coleccionar_paquete_placa.py` (Sand Monitoring) —
+      lee `AREA_WINDOW_COUNT`/`AREA_SUM_*` reales vía `mmap` de
+      `/dev/mem` (offsets confirmados en `scope_cfg.sv`, la `.rst` de
+      este repo está desactualizada, no la documenta). Prueba: captura
+      real de 30s (96% eficiencia) con 18s de lectura de registros en
+      vivo en paralelo (361 ventanas leídas, coincide con 18s/50ms
+      esperado), comparado después contra `exportar_paquete_area.py`
+      corrido sobre el `.bin` de esa misma captura.
+      **Resultado: kurtosis coincide bien** (HW promedio 2.64 vs SW
+      promedio 3.28, ~20% de diferencia — mismo orden que ya documentaba
+      esta sección de simulación más arriba — clasificación "reposo" en
+      ambos). **Área difiere por un factor de ~2900x** (HW en cuentas
+      fijas crudas del filtro RTL, SW en volts calibrados) —
+      matemáticamente esperable: kurtosis es un cociente (m4/m2²)
+      invariante a escala lineal, área no lo es. Se descartó que fuera
+      solo la ganancia de calibración (`0x78`, medida en vivo = `0xbbaf`
+      contra el `0x8000` de ganancia unidad — ratio ~1.47, lejos de
+      explicar 2900x); el factor real es casi seguro la conversión
+      ADC-cuentas-a-volts que aplica `area_kurtosis.py` en software, no
+      replicada del lado HW. **No bloquea el criterio de detección real
+      (kurtosis≥6, invariante a esto) pero queda pendiente si se quiere
+      que el área también coincida en unidades absolutas.** No se pudo
+      probar con un evento de arena real (banco de laboratorio, sin rig
+      de arena) — sigue pendiente confirmar el caso de cruce de umbral
+      con datos reales de campo, no solo con la señal de reposo del
+      banco.
+- [x] **Punto 3 (benchmark de polling con registro real) — Hecho
+      (2026-09-22, `rp-f0fd8c`).** `analisis/placa/c/medir_polling_ventanas.c`
+      (Sand Monitoring) se reescribió para leer `AREA_WINDOW_COUNT` real
+      por `mmap` en vez de simular un contador — el "productor" ya no
+      hace falta, es la FPGA misma (el registro corre solo desde que se
+      carga el bitstream, no arranca en 0 — el conteo de esta corrida se
+      calcula como delta contra el primer valor leído). Corrido en el
+      ARM real (no en la notebook x86 del test de 2026-09-14, `SCHED_FIFO`
+      real obtenido como root) con una captura real de fondo corriendo
+      al mismo tiempo (70s, mono, decimación 32, 98% de eficiencia — la
+      carga real del sistema que importa, no solo leer registros en el
+      vacío). **Resultado: 60s de polling cada 10ms, 1200/1200 ventanas
+      nuevas vistas (exacto, 60s÷50ms), 0 eventos de pérdida, 0 ventanas
+      perdidas, gap máximo entre lecturas = 1 (el mínimo teórico
+      posible dado el intervalo de polling).** Con esto queda descartada
+      la necesidad de una FIFO en HW para este problema — un polling de
+      software simple, con prioridad `SCHED_FIFO`, alcanza de sobra
+      incluso con una captura real compitiendo por CPU/E-S.
 
 ## Simulación: estado y plan (2026-09-14)
 
@@ -715,6 +770,124 @@ resultados) antes de sumarle la siguiente pieza — mismo espíritu que las
 Etapas 4a/4b/4c del filtro. Si una pieza nueva no compila por una
 dependencia de IP de Xilinx no resuelta, ese es exactamente el punto en
 el que hay que decidir generar la IP o mockearla, no forzar un atajo.
+
+## Cómo cargar un bitstream nuevo en la placa (guía operativa, 2026-09-22)
+
+Esta sección existe para que la próxima vez que haga falta flashear un bitstream custom
+(en `rp-f0fd8c` o cualquier placa de pruebas nueva) no haga falta redescubrir esto — costó
+una sesión entera la primera vez, por dos bugs reales del vendor, no del diseño propio.
+
+### 1. Generar el archivo correcto (2 pasos, no 1)
+
+```bash
+cd ~/RedPitaya-FPGA-Release_2025.2
+make PRJ=stream_app MODEL=Z10 prj/stream_app/out/red_pitaya.bit       # bitgen (~5-10 min)
+make PRJ=stream_app MODEL=Z10 prj/stream_app/out/red_pitaya.bit.bin   # bootgen (~segundos)
+```
+
+**El `.bin` que produce `bitgen` (primer paso) NO SIRVE para cargar en la placa.** El
+kernel de esta placa (`fpga_manager`) exige un formato "byte swapped" que solo produce
+`bootgen` (segundo paso, target `.bit.bin`) — sin este paso, `dmesg` muestra:
+```
+fpga_manager fpga0: Invalid bitstream, could not find a sync word. Bitstream must be a byte swapped .bin file
+```
+El `.bit.bin` de `bootgen` arranca con el sync word real (`bb 00 00 00 44 00 22 11` en los
+primeros bytes útiles) — el `.bin` crudo de bitgen no. **El archivo que hay que copiar a la
+placa es `red_pitaya.bit.bin`, nunca `red_pitaya.bin`.**
+
+**Si `make` dice "está actualizado" sin recompilar nada** (pasa después de un `git pull`/
+commit que solo tocó un `.v`/`.sv`): Make no detecta el cambio por timestamp del archivo de
+salida vs. el código fuente en este proyecto. Borrar el `.bit`/`.bin` viejo a mano antes de
+correr `make` de nuevo:
+```bash
+rm -f prj/stream_app/out/red_pitaya.bit prj/stream_app/out/red_pitaya.bin prj/stream_app/out/red_pitaya.bit.bin
+```
+
+### 2. Copiar el archivo correcto a la ruta correcta en la placa
+
+`overlay.sh` (el script del vendor que carga bitstreams, `/opt/redpitaya/sbin/overlay.sh`)
+tiene un bug real: su `--help` sugiere que se le puede pasar un path custom como segundo
+argumento (`overlay.sh <nombre> /ruta/a/custom.bin`), **pero el script ignora ese argumento
+por completo** — internamente siempre usa `/opt/<nombre>/fpga.bin`, sin importar qué se le
+pase como `$2`. La forma real de usarlo:
+
+```bash
+# En la placa:
+mkdir -p /opt/stream_app
+scp <notebook>:.../red_pitaya.bit.bin /opt/stream_app/fpga.bin   # (o via scp+mv, /opt no es de solo lectura)
+/opt/redpitaya/sbin/overlay.sh stream_app etapa7   # el "etapa7" puede ser cualquier string no vacío
+cat /tmp/update_fpga.txt   # confirmar "BIN FILE loaded through FPGA manager successfully"
+```
+
+El tercer argumento (device tree custom) también tiene el mismo bug — si no hace falta un
+`.dtbo` distinto (ver punto 4 más abajo), **no pasar un tercer argumento**: con solo 2
+argumentos, `overlay.sh` sigue usando el `.dtbo` DEFAULT (`$FPGAS/$MODEL/<nombre>/fpga.dtbo`),
+que es justo lo que se quiere. Pasar un tercer argumento "de relleno" activa la rama de
+device tree custom del script, que también apunta a `/opt/<nombre>/fpga.dtbo` (otro archivo
+que probablemente no existe) y falla con `Failed to apply Overlay` / `create_overlay: Failed
+to create overlay (err=-22)`.
+
+### 3. Verificar que cargó de verdad (no confiar solo en el exit code)
+
+```bash
+cat /sys/class/fpga_manager/fpga0/state   # debe decir "operating"
+/opt/redpitaya/bin/monitor 0x400000F0     # DIAG_REG5 (Etapa 2) - dos lecturas con 1s de
+                                            # diferencia deben dar valores DISTINTOS si el
+                                            # bitstream nuevo esta corriendo (es un contador
+                                            # libre). Si da 0x0 fijo, sigue cargado el default.
+```
+
+### 4. `/opt/redpitaya` es de solo lectura — no hay que remontarlo
+
+`/opt/redpitaya` es una partición VFAT separada (`/dev/mmcblk0p1`, la MISMA partición física
+que `/boot`), montada `ro` a propósito en `/etc/fstab`. Un `cp` directo al `fpga.bin`
+default falla con `Read-only file system`. **Decisión tomada: no remontar `rw`** (arriesgar
+el boot partition de una FAT32 para esto no vale la pena). En cambio, para que
+`capturar_stream.py` (que via `campo_common.py` llama `overlay.sh stream_app` SIN argumentos
+custom en cada sesión) cargue el bitstream nuevo automáticamente, se parcheó temporalmente
+esa única línea en el `campo_common.py` ya copiado en la placa (no en `/opt/redpitaya`, es
+un archivo propio del proyecto):
+
+```python
+# antes:
+subprocess.run(['/opt/redpitaya/sbin/overlay.sh', 'stream_app'], ...)
+# despues (temporal, con backup del original guardado al lado):
+subprocess.run(['/opt/redpitaya/sbin/overlay.sh', 'stream_app', 'etapa7'], ...)
+```
+
+Guardar SIEMPRE un backup antes de tocarlo (`cp campo_common.py campo_common.py.bak_<algo>`)
+y verificar con `diff` que el patch es exactamente ese cambio de una línea antes de dar por
+buena cualquier prueba — un patch que quedó puesto por error de una prueba anterior fue la
+causa real de una hora perdida en la sesión del 2026-09-22 (las capturas fallaban con
+`RuntimeError: No se genero archivo de salida en SD` porque apuntaban a un `.dtbo`
+inexistente, no por nada del kernel ni de la placa).
+
+### 5. Si algo deja al kernel en un estado raro (reintentos de firmware en `dmesg`)
+
+Un intento fallido con 3 argumentos (ver punto 2) puede dejar al kernel reintentando un
+`request_firmware` de `fpga.dtbo` periódicamente en el fondo (visible como `(NULL device *):
+Direct firmware load for fpga.dtbo failed with error -2` en `dmesg`, repitiéndose cada tanto
+sin que nadie lo dispare). Un `overlay.sh stream_app` normal (volver al default) **no limpia
+esto**. Un `reboot` simple tampoco se disparó de forma confiable en esta placa (uptime no
+bajó). Lo que sí funcionó, mismo método que ya está documentado para la placa de campo:
+```bash
+systemd-run --on-active=2s systemctl reboot --force --force
+```
+(desacoplado de la sesión SSH que lo dispara, se dispara solo 2s después).
+
+### 6. Checklist rápido para la próxima vez
+
+1. `make ... red_pitaya.bit` (borrar el `.bit` viejo primero si Make dice "actualizado").
+2. `make ... red_pitaya.bit.bin` (bootgen — el archivo que realmente se usa).
+3. Copiar ese `.bit.bin` a `/opt/<nombre>/fpga.bin` en la placa (no a `/opt/redpitaya/...`).
+4. `overlay.sh <nombre> <flag>` (2 argumentos, nunca 3 salvo que haga falta un `.dtbo`
+   distinto de verdad).
+5. Confirmar con `monitor 0x400000F0` (o el registro que corresponda) que cambió de verdad.
+6. Si se quiere que `capturar_stream.py` use el bitstream nuevo: parchear la línea de
+   `overlay.sh` en `campo_common.py` (con backup), no tocar `/opt/redpitaya`.
+7. Para volver al bitstream default: revertir el patch de `campo_common.py` (`cp
+   campo_common.py.bak_... campo_common.py`) — el default de `/opt/redpitaya` nunca se tocó,
+   así que no hace falta restaurar nada ahí.
 
 ## Referencias
 
