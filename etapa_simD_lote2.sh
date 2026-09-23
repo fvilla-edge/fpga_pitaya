@@ -19,17 +19,17 @@ mkdir -p xsim_simD_lote2
 cd xsim_simD_lote2
 
 xvlog -sv \
-  ../../../rtl/divide.v \
-  ../ip/rp_oscilloscope/osc_filter.v \
-  ../ip/rp_oscilloscope/osc_calib.v \
-  ../ip/rp_oscilloscope/osc_decimator.v \
-  ../ip/rp_oscilloscope/bandpass_biquad.v \
-  ../ip/rp_oscilloscope/bandpass_filter.v \
-  ../ip/rp_oscilloscope/area_kurtosis_accum.v \
-  ../ip/rp_oscilloscope/osc_trigger.v \
-  ../ip/rp_oscilloscope/osc_aquire.v \
+  ../../../rtl/rtl/divide.v \
+  ../rtl/rtl/rp_oscilloscope/osc_filter.v \
+  ../rtl/rtl/rp_oscilloscope/osc_calib.v \
+  ../rtl/rtl/rp_oscilloscope/osc_decimator.v \
+  ../rtl/rtl/rp_oscilloscope/bandpass_biquad.v \
+  ../rtl/rtl/rp_oscilloscope/bandpass_filter.v \
+  ../rtl/rtl/rp_oscilloscope/area_kurtosis_accum.v \
+  ../rtl/rtl/rp_oscilloscope/osc_trigger.v \
+  ../rtl/rtl/rp_oscilloscope/osc_aquire.v \
   ../tbn/sim_stub_rp_dma_s2mm.sv \
-  ../ip/rp_oscilloscope/osc_top.v \
+  ../rtl/rtl/rp_oscilloscope/osc_top.v \
   ../tbn/tb_area_kurtosis_lote2_simD.sv
 
 xelab -debug typical tb_area_kurtosis_lote2_simD -s tb_area_kurtosis_lote2_simD_sim -timescale 1ns/1ps

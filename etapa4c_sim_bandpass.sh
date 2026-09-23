@@ -12,8 +12,8 @@ mkdir -p xsim_bandpass
 cd xsim_bandpass
 
 xvlog -sv \
-  ../ip/rp_oscilloscope/bandpass_biquad.v \
-  ../ip/rp_oscilloscope/bandpass_filter.v \
+  ../rtl/rtl/rp_oscilloscope/bandpass_biquad.v \
+  ../rtl/rtl/rp_oscilloscope/bandpass_filter.v \
   ../tbn/tb_bandpass_filter.sv
 
 xelab -debug typical tb_bandpass_filter -s tb_bandpass_filter_sim -timescale 1ns/1ps

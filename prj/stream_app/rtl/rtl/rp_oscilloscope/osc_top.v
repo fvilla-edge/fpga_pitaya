@@ -1,0 +1,588 @@
+`timescale 1ns / 1ps
+
+module osc_top
+  #(parameter M_AXI_ADDR_BITS   = 32, // DMA Address bits
+    parameter M_AXI_DATA_BITS   = 64, // DMA data bits
+    parameter S_AXIS_DATA_BITS  = 16, // ADC data bits
+    parameter DEC_CNT_BITS      = 17, // Decimator counter bits
+    parameter DEC_SHIFT_BITS    = 4,  // Decimator shifter bits
+    parameter TRIG_CNT_BITS     = 32, // Trigger counter bits
+    parameter EVENT_SRC_NUM     = 1,  // Number of event sources
+    parameter TRIG_SRC_NUM      = 1, // Number of trigger sources
+    parameter CHAN_NUM          = 1)( // which channel
+  input wire                              clk_axi,
+  input wire                              clk_adc,
+  input wire                              axi_rstn,
+  input wire                              adc_rstn,
+  // Slave AXI-S
+  input  wire [S_AXIS_DATA_BITS-1:0]      s_axis_tdata,
+  input  wire                             s_axis_tvalid,
+  //
+  input  wire [EVENT_SRC_NUM-1:0]         event_ip_trig,
+  input  wire [EVENT_SRC_NUM-1:0]         event_ip_stop,
+  input  wire [EVENT_SRC_NUM-1:0]         event_ip_start,
+  input  wire [EVENT_SRC_NUM-1:0]         event_ip_reset,
+  //
+  output wire [             4-1:0]        event_sts_o,
+  input  wire [             3-1:0]        event_sel_i,
+
+  input  wire [    TRIG_SRC_NUM-1:0]      trig_mask_i             ,
+  input  wire [   TRIG_CNT_BITS-1:0]      cfg_trig_pre_samp_i     ,
+  input  wire [   TRIG_CNT_BITS-1:0]      cfg_trig_post_samp_i    ,
+  output wire [   TRIG_CNT_BITS-1:0]      sts_trig_pre_cnt_o      ,
+  output wire [   TRIG_CNT_BITS-1:0]      sts_trig_post_cnt_o     ,
+  output wire                             sts_trig_pre_overflow_o ,
+  output wire                             sts_trig_post_overflow_o,
+  input  wire [S_AXIS_DATA_BITS-1:0]      cfg_trig_low_level_i    ,
+  input  wire [S_AXIS_DATA_BITS-1:0]      cfg_trig_high_level_i   ,
+  input  wire                             cfg_trig_edge_i         ,
+
+  input  wire [    DEC_CNT_BITS-1:0]      cfg_dec_factor_i        ,
+  input  wire [  DEC_SHIFT_BITS-1:0]      cfg_dec_rshift_i        ,
+  input  wire                             cfg_avg_en_i            ,
+  input  wire                             cfg_hres_en_i           ,
+  input  wire [               3-1:0]      cfg_loopback_i          ,
+  input  wire                             cfg_8bit_dat_i          ,
+  input  wire                             cfg_legacy_calib_i      ,
+  input  wire [              16-1:0]      cfg_calib_offset_i      ,
+  input  wire [              16-1:0]      cfg_calib_gain_i        ,
+
+  input  wire                             cfg_filt_bypass_i       ,
+  input  wire [              18-1:0]      cfg_filt_coeff_aa_i     ,
+  input  wire [              25-1:0]      cfg_filt_coeff_bb_i     ,
+  input  wire [              25-1:0]      cfg_filt_coeff_kk_i     ,
+  input  wire [              25-1:0]      cfg_filt_coeff_pp_i     ,
+
+  // Etapa 6 (RedPitaya-FPGA): coeficientes configurables del pasabanda
+  // de deteccion de arena (bandpass_filter.v) - ver scope_cfg.sv
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b0_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b1_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b2_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a1_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a2_s0_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b0_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b1_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_b2_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a1_s1_i    ,
+  input  wire signed [              25-1:0]      cfg_bp_coeff_a2_s1_i    ,
+
+  // Etapa 5 (RedPitaya-FPGA): acumuladores de area/kurtosis por
+  // ventana (area_kurtosis_accum.v) sobre la señal ya filtrada
+  input  wire [              32-1:0]      cfg_area_window_samples_i,
+  output wire [              32-1:0]      area_window_count_o     ,
+  output wire [              32-1:0]      area_sum_abs_lo_o       ,
+  output wire [              32-1:0]      area_sum_abs_hi_o       ,
+  output wire [              32-1:0]      area_sum_x2_lo_o        ,
+  output wire [              32-1:0]      area_sum_x2_hi_o        ,
+  output wire [              32-1:0]      area_sum_x4_lo_o        ,
+  output wire [              32-1:0]      area_sum_x4_mid_o       ,
+  output wire [              32-1:0]      area_sum_x4_hi_o        ,
+
+  input  wire [              32-1:0]      cfg_dma_dst_addr1_i ,
+  input  wire [              32-1:0]      cfg_dma_dst_addr2_i ,
+  input  wire [              32-1:0]      cfg_dma_buf_size_i      ,
+  input  wire [              32-1:0]      cfg_dma_ctrl_i          ,
+  input  wire                             cfg_dma_ctrl_we_i       ,
+  input  wire [              64-1:0]      cfg_timestamp_counter_i ,
+  input  wire [              64-1:0]      cfg_timestamp_init_i    ,
+  input  wire                             cfg_timestamp_init_we_i ,
+  output wire [              32-1:0]      cfg_dma_sts_o           ,
+
+
+  output wire [              32-1:0]      buf1_ms_cnt_o           ,
+  output wire [              32-1:0]      buf2_ms_cnt_o           ,
+  output wire [              64-1:0]      buf1_timestamp_o        ,
+  output wire [              64-1:0]      buf2_timestamp_o        ,
+
+  output wire [              32-1:0]      curr_wp_o               ,
+  output wire [              32-1:0]      diag1_o                 ,
+  output wire [              32-1:0]      diag2_o                 ,
+  output wire [              32-1:0]      diag3_o                 ,
+  output wire [              32-1:0]      diag4_o                 ,
+  output wire [              32-1:0]      diag5_o                 , // Etapa 2 (RedPitaya-FPGA): contador libre de "hola mundo"
+
+  input  wire [TRIG_SRC_NUM-1:0]          trig_ip,
+  output wire                             trig_op,
+  output wire                             ctl_rst,
+  output wire                             trig_o,
+  //
+  input  wire                             buf_sel_in,
+  output wire                             buf_sel_out,
+  //   
+  output wire                             dma_intr,
+  //
+  output wire [(M_AXI_ADDR_BITS-1):0]     m_axi_awaddr,    
+  output wire [7:0]                       m_axi_awlen,     
+  output wire [2:0]                       m_axi_awsize,    
+  output wire [1:0]                       m_axi_awburst,   
+  output wire [2:0]                       m_axi_awprot,    
+  output wire [3:0]                       m_axi_awcache,   
+  output wire                             m_axi_awvalid,   
+  input  wire                             m_axi_awready,   
+  output wire [M_AXI_DATA_BITS-1:0]       m_axi_wdata,     
+  output wire [((M_AXI_DATA_BITS/8)-1):0] m_axi_wstrb,     
+  output wire                             m_axi_wlast,     
+  output wire                             m_axi_wvalid,    
+  input  wire                             m_axi_wready,    
+  input  wire [1:0]                       m_axi_bresp,     
+  input  wire                             m_axi_bvalid,    
+  output wire                             m_axi_bready       
+);
+
+////////////////////////////////////////////////////////////
+// Signals
+////////////////////////////////////////////////////////////
+
+wire                        dma_mode;
+
+reg                         event_num_trig;
+reg                         event_num_stop;
+reg                         event_num_start;
+reg                         event_num_reset;
+
+wire                        event_sts_trig;
+wire                        event_sts_stop;
+wire                        event_sts_start;
+wire                        event_sts_reset;
+wire                        ctl_trg;
+
+wire [31:0]                 cfg_dma_diags;
+
+wire [S_AXIS_DATA_BITS-1:0] calib_tdata;   
+wire                        calib_tvalid;   
+wire                        calib_tready;
+wire [S_AXIS_DATA_BITS-1:0] legacy_calib_tdata;
+wire                        legacy_calib_tvalid;
+wire                        legacy_calib_tready;
+wire [S_AXIS_DATA_BITS-1:0] filt_in_tdata;
+wire                        filt_in_tvalid;
+wire [S_AXIS_DATA_BITS-1:0] dec_src_tdata;
+wire                        dec_src_tvalid;
+
+wire [S_AXIS_DATA_BITS-1:0] bp_tdata;
+wire [39:0] area_sum_abs;
+wire [51:0] area_sum_x2;
+wire [83:0] area_sum_x4;
+wire                        bp_tvalid;
+
+wire [S_AXIS_DATA_BITS-1:0] dec_indata;
+wire [S_AXIS_DATA_BITS-1:0] dec_tdata;    
+wire                        dec_tvalid;   
+wire                        dec_tready;   
+wire                        ramp_en;
+wire                        loopback_gpio;
+wire                        loopback_dac;
+
+wire [S_AXIS_DATA_BITS-1:0] trig_tdata;    
+wire                        trig_tvalid;   
+wire                        trig_tready;   
+
+wire [S_AXIS_DATA_BITS-1:0] acq_tdata;    
+wire                        acq_tvalid;   
+wire                        acq_tready;   
+wire                        acq_tlast;
+
+wire  [31:0]                buf1_ms_cnt;
+wire  [31:0]                buf2_ms_cnt;
+
+wire [S_AXIS_DATA_BITS-1:0] filt_tdata;   
+wire                        filt_tvalid;   
+wire                        filt_tready;
+
+wire                        external_trig_val;
+
+reg                         intr_reg;
+reg [32-1:0]                intr_cnt;
+
+reg [32-1:0]                curr_wp_r1, curr_wp_r2;
+
+always @(posedge clk_adc)
+begin
+  curr_wp_r1 <= m_axi_awaddr;
+  curr_wp_r2 <= curr_wp_r1;
+end
+assign curr_wp_o = curr_wp_r2;
+
+always @(posedge clk_adc)
+begin
+  intr_reg <= dma_intr;
+  if (~adc_rstn)
+    intr_cnt <= 'h0;
+  else if (~intr_reg && dma_intr) begin
+    intr_cnt <= intr_cnt+1;
+  end  
+end
+
+reg [32-1:0] trig_cnt, clk_cnt;
+always @(posedge clk_adc)
+begin
+  if (~adc_rstn) begin
+    trig_cnt <= 'h0;
+    clk_cnt  <= 'h0;
+  end else begin
+    if (cfg_dma_ctrl_we_i & cfg_dma_ctrl_i[0])
+      clk_cnt  <= clk_cnt + 'h1;
+
+    if (cfg_dma_ctrl_we_i) begin
+      trig_cnt <= trig_cnt + 'h1;
+    end  
+  end
+end
+
+// Etapa 2 (RedPitaya-FPGA): contador libre, incrementa cada ciclo de clk_adc.
+// Sin conexion a ninguna logica existente - solo prueba que se puede agregar
+// RTL nuevo y leerlo por un registro AXI nuevo sin romper nada.
+reg [32-1:0] holamundo_cnt;
+always @(posedge clk_adc)
+begin
+  if (~adc_rstn)
+    holamundo_cnt <= 'h0;
+  else
+    holamundo_cnt <= holamundo_cnt + 'h1;
+end
+
+reg [S_AXIS_DATA_BITS-1:0] ramp_sig;
+always @(posedge clk_adc)
+begin
+  if (~adc_rstn)
+    ramp_sig <= 'h0;
+  else begin
+      ramp_sig <= ramp_sig + 'h1;
+  end
+end
+
+reg [S_AXIS_DATA_BITS-1:0] dec_test;    
+always @(posedge clk_adc)
+begin
+  if (dec_tvalid)
+    dec_test <= dec_tdata;
+end
+
+assign external_trig_val = trig_ip[5] & (trig_mask_i == 'h20);
+
+assign ramp_en       = cfg_loopback_i[2];
+assign loopback_gpio = cfg_loopback_i[1];
+assign loopback_dac  = cfg_loopback_i[0];
+assign event_sts_o   = {event_sts_trig, event_sts_stop, event_sts_start, event_sts_reset};
+
+
+assign diag1_o = intr_cnt;
+assign diag2_o = trig_cnt;
+assign diag3_o = clk_cnt;
+assign diag4_o = cfg_dma_diags;
+assign diag5_o = holamundo_cnt;
+
+reg rstn_fil, rstn_cal, rstn_dec, rstn_trg, rstn_acq, rstn_smm;
+always @(posedge clk_adc) // resolve high fanout timing issues
+begin
+  rstn_fil <= adc_rstn;
+  rstn_cal <= adc_rstn;
+  rstn_dec <= adc_rstn;
+  rstn_trg <= adc_rstn;
+  rstn_acq <= adc_rstn;
+  rstn_smm <= adc_rstn;
+end
+
+////////////////////////////////////////////////////////////
+// Name : Calibration
+//
+// Two calibration positions are supported with the same offset/gain registers:
+// the new path applies calibration before the filter, while the legacy path
+// keeps the calibration after the filter. Legacy mode preserves old factory
+// calibration compatibility because the historical post-filter calibration
+// included software-specific behavior and is not compatible with the new
+// pre-filter calibration path.
+////////////////////////////////////////////////////////////
+
+osc_calib #(
+  .AXIS_DATA_BITS   (S_AXIS_DATA_BITS))
+  U_osc_calib(
+  .clk              (clk_adc),
+  .rst_n            (rstn_cal),        
+  // Slave AXI-S
+  .s_axis_tdata     (s_axis_tdata),
+  .s_axis_tvalid    (s_axis_tvalid),
+  .s_axis_tready    (),
+  // Master AXI-S
+  .m_axis_tdata     (calib_tdata),
+  .m_axis_tvalid    (calib_tvalid),
+  .m_axis_tready    (calib_tready),
+  // Config
+  .cfg_calib_offset (cfg_calib_offset_i), 
+  .cfg_calib_gain   (cfg_calib_gain_i));
+
+assign filt_in_tdata  = cfg_legacy_calib_i ? s_axis_tdata  : calib_tdata;
+assign filt_in_tvalid = cfg_legacy_calib_i ? s_axis_tvalid : calib_tvalid;
+
+osc_filter i_dfilt (
+   // ADC
+  .clk              ( clk_adc     ),  // ADC clock
+  .rst_n            ( rstn_fil    ),  // ADC reset - active low
+  // Slave AXI-S
+  .s_axis_tdata     (filt_in_tdata),
+  .s_axis_tvalid    (filt_in_tvalid),
+  .s_axis_tready    (calib_tready),
+  // Master AXI-S
+  .m_axis_tdata     (filt_tdata),
+  .m_axis_tvalid    (filt_tvalid),
+  .m_axis_tready    (filt_tready),
+   // configuration
+  .cfg_bypass      ( cfg_filt_bypass_i   ),
+  .cfg_coeff_aa    ( cfg_filt_coeff_aa_i),  // config AA coefficient
+  .cfg_coeff_bb    ( cfg_filt_coeff_bb_i ),  // config BB coefficient
+  .cfg_coeff_kk    ( cfg_filt_coeff_kk_i ),  // config KK coefficient
+  .cfg_coeff_pp    ( cfg_filt_coeff_pp_i )   // config PP coefficient
+);
+
+osc_calib #(
+  .AXIS_DATA_BITS   (S_AXIS_DATA_BITS))
+  U_osc_calib_legacy(
+  .clk              (clk_adc),
+  .rst_n            (rstn_cal),
+  // Slave AXI-S
+  .s_axis_tdata     (filt_tdata),
+  .s_axis_tvalid    (filt_tvalid),
+  .s_axis_tready    (legacy_calib_tready),
+  // Master AXI-S
+  .m_axis_tdata     (legacy_calib_tdata),
+  .m_axis_tvalid    (legacy_calib_tvalid),
+  .m_axis_tready    (dec_tready),
+  // Config
+  .cfg_calib_offset (cfg_calib_offset_i),
+  .cfg_calib_gain   (cfg_calib_gain_i));
+
+assign dec_src_tdata  = cfg_legacy_calib_i ? legacy_calib_tdata : filt_tdata;
+assign dec_src_tvalid = cfg_legacy_calib_i ? legacy_calib_tvalid : filt_tvalid;
+
+////////////////////////////////////////////////////////////
+// Name : Decimation
+//
+////////////////////////////////////////////////////////////
+assign dec_indata = ramp_en      ? ramp_sig     : 
+                   (loopback_dac ? s_axis_tdata : dec_src_tdata);    
+wire signed [S_AXIS_DATA_BITS-1:0] trig_low_level =
+  cfg_hres_en_i ? ($signed(cfg_trig_low_level_i) <<< 2) : $signed(cfg_trig_low_level_i);
+wire signed [S_AXIS_DATA_BITS-1:0] trig_high_level =
+  cfg_hres_en_i ? ($signed(cfg_trig_high_level_i) <<< 2) : $signed(cfg_trig_high_level_i);
+
+osc_decimator #(
+  .AXIS_DATA_BITS (S_AXIS_DATA_BITS),
+  .CNT_BITS       (17),
+  .SHIFT_BITS     (4))
+  U_osc_decimator(
+  .clk            (clk_adc),                   
+  .rst_n          (rstn_dec),        
+  .s_axis_tdata   (dec_indata),          
+  .s_axis_tvalid  (dec_src_tvalid),     
+  .s_axis_tready  (filt_tready),                                                                 
+  .m_axis_tdata   (dec_tdata),          
+  .m_axis_tvalid  (dec_tvalid),    
+  .m_axis_tready  (dec_tready),      
+  .ctl_rst        (event_num_reset),                                                                     
+  .cfg_avg_en     (cfg_avg_en_i),            
+  .cfg_hres_en    (cfg_hres_en_i),
+  .cfg_dec_factor (cfg_dec_factor_i),        
+  .cfg_dec_rshift (cfg_dec_rshift_i));       
+
+////////////////////////////////////////////////////////////
+// Name : Pasabanda (deteccion de arena) - Etapa 4c (RedPitaya-FPGA)
+//
+// Movido de ANTES a DESPUES del decimador (estaba entre osc_calib y
+// osc_decimator en la Etapa 3/4a/4b) - a la frecuencia completa del ADC
+// (125MHz) los polos del filtro quedaban pegadisimos al circulo unidad
+// (banda de interes = fraccion minuscula del Nyquist) y el punto fijo
+// entraba en un "limit cycle" real (la salida quedaba oscilando en un
+// valor no nulo para siempre, ni con entrada en silencio decaia a cero -
+// confirmado con un test de impulso+silencio). Filtrando DESPUES de
+// decimar (misma idea que el software, que filtra la senal ya decimada)
+// los polos quedan mucho mas lejos del circulo unidad y el problema deja
+// de existir por diseno. Coeficientes calculados para fs=3906250Hz
+// (decimacion 32, la que coincide con los datos reales usados para
+// validar el resto del proyecto) - si se usa decimacion 64 con este
+// mismo bitstream, el filtro queda corrido de banda (limitacion conocida,
+// sin resolver: el factor de decimacion es configurable en tiempo de
+// ejecucion via cfg_dec_factor, los coeficientes del filtro no).
+////////////////////////////////////////////////////////////
+bandpass_filter #(
+  .S_AXIS_DATA_BITS (S_AXIS_DATA_BITS))
+  U_bandpass_filter(
+  .clk            (clk_adc),
+  .rst_n          (rstn_dec),
+  .s_axis_tdata   (dec_tdata),
+  .s_axis_tvalid  (dec_tvalid),
+  .s_axis_tready  (),          // derivacion: el tready de la cadena lo maneja osc_trigger
+  .m_axis_tdata   (bp_tdata),
+  .m_axis_tvalid  (bp_tvalid),
+  .m_axis_tready  (1'b1),
+  .cfg_coeff_b0_s0 (cfg_bp_coeff_b0_s0_i),
+  .cfg_coeff_b1_s0 (cfg_bp_coeff_b1_s0_i),
+  .cfg_coeff_b2_s0 (cfg_bp_coeff_b2_s0_i),
+  .cfg_coeff_a1_s0 (cfg_bp_coeff_a1_s0_i),
+  .cfg_coeff_a2_s0 (cfg_bp_coeff_a2_s0_i),
+  .cfg_coeff_b0_s1 (cfg_bp_coeff_b0_s1_i),
+  .cfg_coeff_b1_s1 (cfg_bp_coeff_b1_s1_i),
+  .cfg_coeff_b2_s1 (cfg_bp_coeff_b2_s1_i),
+  .cfg_coeff_a1_s1 (cfg_bp_coeff_a1_s1_i),
+  .cfg_coeff_a2_s1 (cfg_bp_coeff_a2_s1_i));
+
+////////////////////////////////////////////////////////////
+// Name : Area/kurtosis por ventana - Etapa 5 (RedPitaya-FPGA)
+//
+// Sobre la señal YA filtrada (bp_tdata) - no toca el camino hacia
+// osc_trigger, es una rama en paralelo (tap), no altera nada existente
+////////////////////////////////////////////////////////////
+area_kurtosis_accum #(
+  .S_AXIS_DATA_BITS (S_AXIS_DATA_BITS))
+  U_area_kurtosis_accum(
+  .clk                (clk_adc),
+  .rst_n              (rstn_dec),
+  .s_axis_tdata       (bp_tdata),
+  .s_axis_tvalid      (bp_tvalid),
+  .cfg_window_samples (cfg_area_window_samples_i),
+  .sum_abs            (area_sum_abs),
+  .sum_x2             (area_sum_x2),
+  .sum_x4             (area_sum_x4),
+  .window_count       (area_window_count_o));
+
+assign area_sum_abs_lo_o  = area_sum_abs[31:0];
+assign area_sum_abs_hi_o  = {24'h0, area_sum_abs[39:32]};
+assign area_sum_x2_lo_o   = area_sum_x2[31:0];
+assign area_sum_x2_hi_o   = {12'h0, area_sum_x2[51:32]};
+assign area_sum_x4_lo_o   = area_sum_x4[31:0];
+assign area_sum_x4_mid_o  = area_sum_x4[63:32];
+assign area_sum_x4_hi_o   = {12'h0, area_sum_x4[83:64]};
+
+////////////////////////////////////////////////////////////
+// Name : Trigger
+// 
+////////////////////////////////////////////////////////////
+
+osc_trigger #(
+  .AXIS_DATA_BITS       (S_AXIS_DATA_BITS),
+  .TRIG_LEVEL_BITS      (S_AXIS_DATA_BITS))
+  U_osc_trigger(
+  .clk                  (clk_adc),                         
+  .rst_n                (rstn_trg),                                                    
+  .ctl_rst              (event_num_reset),                                                    
+  .cfg_trig_low_level   (trig_low_level),          
+  .cfg_trig_high_level  (trig_high_level),         
+  .cfg_trig_edge        (cfg_trig_edge_i),                                                 
+  .trig                 (trig_op),                                                    
+  .s_axis_tdata         (dec_tdata),                
+  .s_axis_tvalid        (dec_tvalid),               
+  .s_axis_tready        (dec_tready),                                                          
+  .m_axis_tdata         (trig_tdata),                
+  .m_axis_tvalid        (trig_tvalid),  
+  .m_axis_tready        (trig_tready));                  
+
+////////////////////////////////////////////////////////////
+// Name : Acquire
+// 
+////////////////////////////////////////////////////////////
+
+osc_acquire #(
+  .AXIS_DATA_BITS         (S_AXIS_DATA_BITS),
+  .CNT_BITS               (TRIG_CNT_BITS))
+  U_osc_acq(
+  .clk                    (clk_adc),
+  .rst_n                  (rstn_acq),
+  .s_axis_tdata           (trig_tdata),     
+  .s_axis_tvalid          (trig_tvalid), 
+  .s_axis_tready          (trig_tready),                                
+  .m_axis_tdata           (acq_tdata),     
+  .m_axis_tvalid          (acq_tvalid),    
+  .m_axis_tready          (acq_tready),
+  .m_axis_tlast           (acq_tlast),  
+  .ctl_start              (event_num_start), 
+  .ctl_rst                (event_num_reset),   
+  .ctl_stop               (event_num_stop),   
+  .ctl_trig               (ctl_trg),   
+  .cfg_mode               (dma_mode),
+  .cfg_trig_pre_samp      (cfg_trig_pre_samp_i),  
+  .cfg_trig_post_samp     (cfg_trig_post_samp_i),   
+  .sts_start              (event_sts_start), 
+  .sts_stop               (event_sts_stop),
+  .sts_trig               (event_sts_trig),
+  .sts_trig_pre_cnt       (sts_trig_pre_cnt_o),
+  .sts_trig_pre_overflow  (sts_trig_pre_overflow_o),  
+  .sts_trig_post_cnt      (sts_trig_post_cnt_o),
+  .sts_trig_post_overflow (sts_trig_post_overflow_o));    
+  
+////////////////////////////////////////////////////////////
+// Name : DMA S2MM
+// 
+////////////////////////////////////////////////////////////
+  
+rp_dma_s2mm #(
+  .AXI_ADDR_BITS  (M_AXI_ADDR_BITS),
+  .AXI_DATA_BITS  (M_AXI_DATA_BITS),
+  .AXIS_DATA_BITS (S_AXIS_DATA_BITS),
+  .AXI_BURST_LEN  (16))
+  U_dma_s2mm(
+  .m_axi_aclk     (clk_axi),        
+  .s_axis_aclk    (clk_adc),      
+  .aresetn        (rstn_smm),  
+  .busy           (),
+  .intr           (dma_intr),     
+  .mode           (dma_mode),  
+  .reg_wr_data    (cfg_dma_ctrl_i),       
+  .reg_wr_we      (cfg_dma_ctrl_we_i),   
+  .reg_sts        (cfg_dma_sts_o),
+  .reg_diags      (cfg_dma_diags),  
+  .reg_dst_addr1  (cfg_dma_dst_addr1_i),
+  .reg_dst_addr2  (cfg_dma_dst_addr2_i),
+  .reg_buf_size   (cfg_dma_buf_size_i),
+  .timestamp_counter (cfg_timestamp_counter_i),
+  .timestamp_init (cfg_timestamp_init_i),
+  .timestamp_init_we (cfg_timestamp_init_we_i),
+  .ctl_start_o    (ctl_start_o),
+  .ctl_start_ext  (external_trig_val),
+  .use_8bit       (cfg_8bit_dat_i),
+  .buf1_ms_cnt    (buf1_ms_cnt_o),
+  .buf2_ms_cnt    (buf2_ms_cnt_o),
+  .buf1_timestamp (buf1_timestamp_o),
+  .buf2_timestamp (buf2_timestamp_o),
+  .buf_sel_in     (buf_sel_in),
+  .buf_sel_out    (buf_sel_out),
+  .m_axi_awaddr   (m_axi_awaddr), 
+  .m_axi_awlen    (m_axi_awlen),  
+  .m_axi_awsize   (m_axi_awsize), 
+  .m_axi_awburst  (m_axi_awburst),
+  .m_axi_awprot   (m_axi_awprot), 
+  .m_axi_awcache  (m_axi_awcache),
+  .m_axi_awvalid  (m_axi_awvalid),
+  .m_axi_awready  (m_axi_awready),
+  .m_axi_wdata    (m_axi_wdata),  
+  .m_axi_wstrb    (m_axi_wstrb),  
+  .m_axi_wlast    (m_axi_wlast),  
+  .m_axi_wvalid   (m_axi_wvalid), 
+  .m_axi_wready   (m_axi_wready), 
+  .m_axi_bresp    (m_axi_bresp),  
+  .m_axi_bvalid   (m_axi_bvalid), 
+  .m_axi_bready   (m_axi_bready), 
+  .s_axis_tdata   (acq_tdata),    
+  .s_axis_tvalid  (acq_tvalid),  
+  .s_axis_tready  (acq_tready),  
+  .s_axis_tlast   (acq_tlast));     
+
+always @(posedge clk_adc)
+begin
+  if (adc_rstn == 0) begin
+    event_num_trig  <= 0;    
+    event_num_start <= 0;   
+    event_num_stop  <= 0;    
+    event_num_reset <= 0;   
+  end else begin
+    event_num_trig  <= event_ip_trig[event_sel_i];    
+    event_num_start <= event_ip_start[event_sel_i];   
+    event_num_stop  <= event_ip_stop[event_sel_i];     
+    event_num_reset <= event_ip_reset[event_sel_i];  
+  end  
+end
+
+assign ctl_rst = event_num_reset;
+assign event_sts_reset = 0;
+
+assign ctl_trg = event_num_trig | |(trig_ip & trig_mask_i);
+assign trig_o  = ctl_start_o;
+endmodule

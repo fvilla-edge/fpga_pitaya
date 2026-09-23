@@ -58,6 +58,10 @@ module tb_area_kurtosis_accum;
 
   task automatic check_window(input [39:0] exp_abs, input [51:0] exp_x2, input [83:0] exp_x4, input [31:0] exp_cnt);
     begin
+      // Port 2026.1: el acumulador tiene 3 etapas de registros, bajar tvalid
+      // y esperar a que se vacie el pipeline antes de mirar las sumas
+      @(negedge clk); s_axis_tvalid = 1'b0;
+      repeat (4) @(posedge clk); #1;
       checks = checks + 1;
       if ((sum_abs !== exp_abs) || (sum_x2 !== exp_x2) || (sum_x4 !== exp_x4) || (window_count !== exp_cnt)) begin
         errors = errors + 1;

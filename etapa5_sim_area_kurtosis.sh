@@ -10,7 +10,7 @@ mkdir -p xsim_area_kurtosis
 cd xsim_area_kurtosis
 
 xvlog -sv \
-  ../ip/rp_oscilloscope/area_kurtosis_accum.v \
+  ../rtl/rtl/rp_oscilloscope/area_kurtosis_accum.v \
   ../tbn/tb_area_kurtosis_accum.sv
 
 xelab -debug typical tb_area_kurtosis_accum -s tb_area_kurtosis_accum_sim -timescale 1ns/1ps

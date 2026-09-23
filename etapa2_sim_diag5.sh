@@ -12,12 +12,12 @@ mkdir -p xsim_diag5
 cd xsim_diag5
 
 xvlog -sv \
-  ../../../rtl/interface/axi4_if.sv \
-  ../../../rtl/interface/sys_bus_if.sv \
-  ../../../rtl/axi4_slave.sv \
-  ../../../rtl/sync_rw_single.v \
+  ../../../rtl/rtl/interface/axi4_if.sv \
+  ../../../rtl/rtl/interface/sys_bus_if.sv \
+  ../../../rtl/rtl/axi4_slave.sv \
+  ../../../rtl/rtl/sync_rw_single.v \
   ../../../tbn/axi_master_model.sv \
-  ../ip/rp_oscilloscope/scope_cfg.sv \
+  ../rtl/rtl/rp_oscilloscope/scope_cfg.sv \
   ../tbn/tb_scope_cfg_diag5.sv
 
 xelab -debug typical tb_scope_cfg_diag5 -s tb_scope_cfg_diag5_sim -timescale 1ns/1ps

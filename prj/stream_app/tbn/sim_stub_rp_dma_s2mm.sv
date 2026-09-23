@@ -42,12 +42,17 @@ module rp_dma_s2mm
   input  wire [31:0]                    reg_dst_addr1,
   input  wire [31:0]                    reg_dst_addr2,
   input  wire [31:0]                    reg_buf_size,
+  input  wire [63:0] timestamp_counter,
+  input  wire [63:0] timestamp_init,
+  input  wire        timestamp_init_we,
   output wire                           ctl_start_o,
   input  wire                           ctl_start_ext,
   input  wire                           use_8bit,
   //
   output wire [31:0]                    buf1_ms_cnt,
   output wire [31:0]                    buf2_ms_cnt,
+  output wire [63:0] buf1_timestamp,
+  output wire [63:0] buf2_timestamp,
   input  wire                           buf_sel_in,
   output wire                           buf_sel_out,
   //
@@ -83,6 +88,8 @@ module rp_dma_s2mm
   assign ctl_start_o   = 1'b0;
   assign buf1_ms_cnt   = 32'h0;
   assign buf2_ms_cnt   = 32'h0;
+  assign buf1_timestamp = 64'h0;  // Port 2026.1: puertos de timestamp nuevos
+  assign buf2_timestamp = 64'h0;
   assign buf_sel_out   = buf_sel_in;
 
   assign m_axi_awaddr  = {AXI_ADDR_BITS{1'b0}};

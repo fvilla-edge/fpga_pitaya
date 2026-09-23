@@ -89,6 +89,9 @@ module tb_area_kurtosis_simD;
     // decimador en passthrough (factor 1): los datos ya vienen decimados
     // por 32 desde el archivo real (fs=3906250Hz, igual que en la placa)
     .cfg_dec_factor_i (17'd1), .cfg_dec_rshift_i (4'h0), .cfg_avg_en_i (1'b0),
+    // Port 2026.1: entradas nuevas de upstream, en su valor neutro
+    .cfg_hres_en_i (1'b0), .cfg_legacy_calib_i (1'b0),
+    .cfg_timestamp_counter_i (64'h0), .cfg_timestamp_init_i (64'h0), .cfg_timestamp_init_we_i (1'b0),
     .cfg_loopback_i (3'h0), .cfg_8bit_dat_i (1'b0),
     // cfg_calib_gain_i=0 zaría la señal por completo (es un multiplicador,
     // no un offset) - se usa el default real de scope_cfg.sv (ganancia

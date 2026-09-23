@@ -6,7 +6,7 @@ set fpga_path ../../..
 set path_brd ./$fpga_path/brd
 set path_rtl rtl
 set path_ip  ip
-set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
+set path_bd  project/redpitaya.gen/sources_1/bd/system/hdl
 set path_sdc ./$fpga_path/sdc
 set path_sdc_prj sdc
 set path_tbn tbn
@@ -48,7 +48,6 @@ add_files                         $path_rtl
 add_files                         $path_bd
 
 update_files -from_files $path_rtl/red_pitaya_scope.v -to_files ../$fpga_path/$path_rtl/classic/red_pitaya_scope.v -filesets [get_filesets *]
-
 add_files -fileset sim_1 -norecurse $path_tbn/red_pitaya_proc_tb.vhd
 
 add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc

@@ -66,6 +66,9 @@ module tb_area_kurtosis_lote2_simD;
     .sts_trig_pre_overflow_o (sts_trig_pre_overflow_o), .sts_trig_post_overflow_o (sts_trig_post_overflow_o),
     .cfg_trig_low_level_i (16'h0), .cfg_trig_high_level_i (16'h0), .cfg_trig_edge_i (1'b0),
     .cfg_dec_factor_i (17'd1), .cfg_dec_rshift_i (4'h0), .cfg_avg_en_i (1'b0),
+    // Port 2026.1: entradas nuevas de upstream, en su valor neutro
+    .cfg_hres_en_i (1'b0), .cfg_legacy_calib_i (1'b0),
+    .cfg_timestamp_counter_i (64'h0), .cfg_timestamp_init_i (64'h0), .cfg_timestamp_init_we_i (1'b0),
     .cfg_loopback_i (3'h0), .cfg_8bit_dat_i (1'b0),
     .cfg_calib_offset_i (16'h0), .cfg_calib_gain_i (16'h8000),
     .cfg_filt_bypass_i (1'b1),
