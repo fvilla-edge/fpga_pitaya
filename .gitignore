@@ -15,3 +15,12 @@ vivado_pid*.str
 *usage_statistics_webtalk*
 tight_setup_hold_pins.txt
 synReport.txt*
+
+# Port 2026.1: el flujo nuevo compila en prj/<prj>/build/ y deja los
+# productos/reportes en prj/<prj>/out/ (el .bif si va versionado)
+prj/*/build/
+prj/*/out/*.bin
+prj/*/out/*.bit
+prj/*/out/*.prm
+prj/*/out/*.rpt
+prj/*/sdk/

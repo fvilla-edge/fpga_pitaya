@@ -79,6 +79,41 @@ module tb_bandpass_filter;
   integer max_abs_diff = 0;
   integer diff;
 
+  // Port a Release_2026.1: se alimenta UNA muestra cada GAP ciclos (como el
+  // decimador real a dec32), no una por ciclo. Alimentar una por ciclo era
+  // justo lo que escondia el bug del biquad (el estado avanzaba en cada
+  // ciclo, sin mirar tvalid). Un monitor compara cada salida valida contra
+  // el modelo, en orden.
+  localparam integer GAP = 32;
+  integer fase = 1;      // 1 = vectores de la Etapa 4c, 2 = reconfiguracion
+  integer k = 0;         // salidas validas vistas en la fase actual
+  reg [15:0] esperado;
+
+  always @(posedge clk) begin
+    if (rst_n && m_axis_tvalid) begin
+      esperado = (fase == 1) ? vec_expected[k] : (1000 + k);
+      checks = checks + 1;
+      if (m_axis_tdata !== esperado) begin
+        errors = errors + 1;
+        if (errors <= 20)
+          $display("FAIL fase %0d salida %0d @ %0t: salida=%0d, se esperaba=%0d",
+                   fase, k, $time, $signed(m_axis_tdata), $signed(esperado));
+      end
+      k = k + 1;
+    end
+  end
+
+  task automatic alimentar(input [15:0] val);
+    begin
+      @(negedge clk);
+      s_axis_tdata  = val;
+      s_axis_tvalid = 1'b1;
+      @(negedge clk);
+      s_axis_tvalid = 1'b0;
+      repeat (GAP - 1) @(negedge clk);
+    end
+  endtask
+
   initial begin
     $readmemh("../tbn/vectores/etapa4c_input.mem", vec_in);
     $readmemh("../tbn/vectores/etapa4c_expected.mem", vec_expected);
@@ -87,61 +122,29 @@ module tb_bandpass_filter;
     repeat (5) @(posedge clk);
     rst_n = 1;
 
-    for (i = 0; i < N_SAMPLES + LATENCY; i = i + 1) begin
-      @(negedge clk);
-      if (i < N_SAMPLES) begin
-        s_axis_tdata  = vec_in[i];
-        s_axis_tvalid = 1'b1;
-      end else begin
-        s_axis_tdata  = 16'h0;
-        s_axis_tvalid = 1'b0;
-      end
-
-      @(posedge clk);
-      #1;
-
-      if (i >= LATENCY) begin
-        checks = checks + 1;
-        if (m_axis_tdata !== vec_expected[i-LATENCY]) begin
-          errors = errors + 1;
-          if (errors <= 20)
-            $display("FAIL muestra %0d @ %0t: salida=0x%04h (%0d), se esperaba=0x%04h (%0d)",
-                      i-LATENCY, $time, m_axis_tdata, $signed(m_axis_tdata),
-                      vec_expected[i-LATENCY], $signed(vec_expected[i-LATENCY]));
-        end
-      end
+    for (i = 0; i < N_SAMPLES; i = i + 1)
+      alimentar(vec_in[i]);
+    repeat (2 * GAP) @(negedge clk);
+    if (k !== N_SAMPLES) begin
+      errors = errors + 1;
+      $display("FAIL: salidas validas=%0d, se esperaban %0d", k, N_SAMPLES);
     end
 
     // ------------------------------------------------------------------
     // Etapa 6: reconfigurar los coeficientes EN CALIENTE (sin reset, sin
-    // recompilar) a ganancia unitaria en las 2 secciones, y confirmar
-    // que el filtro pasa a comportarse como un pasamanos - prueba que el
-    // camino de registro realmente cambia el comportamiento en runtime,
-    // no solo que compila con los valores default correctos.
+    // recompilar) a ganancia unitaria en las 2 secciones: cada salida
+    // tiene que ser igual a su entrada.
     // ------------------------------------------------------------------
     cfg_coeff_b0_s0 = 25'sd1048576; cfg_coeff_b1_s0 = 0; cfg_coeff_b2_s0 = 0; cfg_coeff_a1_s0 = 0; cfg_coeff_a2_s0 = 0;
     cfg_coeff_b0_s1 = 25'sd1048576; cfg_coeff_b1_s1 = 0; cfg_coeff_b2_s1 = 0; cfg_coeff_a1_s1 = 0; cfg_coeff_a2_s1 = 0;
-    repeat (10) @(posedge clk); // drenar el pipeline con los coeficientes viejos
-
-    for (i = 0; i < 20; i = i + 1) begin
-      @(negedge clk);
-      s_axis_tdata  = 1000 + i;
-      s_axis_tvalid = 1'b1;
-      @(posedge clk);
-      #1;
-    end
-    // seguir alimentando para poder leer las ultimas muestras ya filtradas
-    for (i = 0; i < LATENCY; i = i + 1) begin
-      @(negedge clk);
-      s_axis_tdata = 1000 + 20 + i;
-      @(posedge clk);
-      #1;
-      checks = checks + 1;
-      if (m_axis_tdata !== (1000 + 20 + i - LATENCY)) begin
-        errors = errors + 1;
-        $display("FAIL (reconfig runtime) @ %0t: salida=%0d, se esperaba=%0d",
-                  $time, $signed(m_axis_tdata), 1000 + 20 + i - LATENCY);
-      end
+    repeat (10) @(negedge clk);
+    fase = 2; k = 0;
+    for (i = 0; i < 20; i = i + 1)
+      alimentar(1000 + i);
+    repeat (2 * GAP) @(negedge clk);
+    if (k !== 20) begin
+      errors = errors + 1;
+      $display("FAIL: reconfiguracion, salidas validas=%0d, se esperaban 20", k);
     end
     $display("Chequeo de reconfiguracion en caliente (ganancia unitaria): hecho.");
 
@@ -156,7 +159,7 @@ module tb_bandpass_filter;
   end
 
   initial begin
-    #2_000_000;
+    #20_000_000;
     $display("RESULTADO: TIMEOUT - la simulacion no termino sola");
     $finish;
   end

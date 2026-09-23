@@ -60,56 +60,41 @@ module bandpass_biquad #(
 
 wire signed [S_AXIS_DATA_BITS-1:0] din = s_axis_tdata;
 
-// historia: x0 = muestra actual, x1/x2 = las 2 anteriores; y1/y2 = las
-// 2 salidas anteriores. x0..x2 e y1..y2 avanzan JUNTOS, un paso por
-// ciclo - necesario porque el filtro tiene feedback (y1/y2 dependen de
-// la salida): no se puede partir la multiplicacion-acumulacion en mas
-// de un registro intermedio entre la captura de x0 y la actualizacion de
-// y1, o las muestras de "x" quedan desalineadas en el tiempo respecto a
-// las de "y" (probado con un diseño de 3 ciclos que rompia la Etapa 4b
-// aunque pasaba la 4a, donde a1=a2=0 no dejaba ver el problema). Todo el
-// producto-acumulado-saturado de abajo es COMBINACIONAL, un solo ciclo.
+// Port a Release_2026.1 — DOS arreglos:
+//
+// 1) BUG REAL: antes x0..x2 / y1..y2 avanzaban en CADA ciclo de clk, sin
+//    mirar s_axis_tvalid. Los testbenches daban una muestra por ciclo y no
+//    lo veian, pero en la placa el decimador entrega una muestra cada
+//    cfg_dec_factor ciclos (32 a dec32) y la mantiene quieta: el filtro
+//    iteraba 32 veces por muestra, o sea era OTRO filtro (coeficientes de
+//    fs=3906250Hz corriendo a 125MHz, banda corrida x32). Ahora el estado
+//    avanza solo con una muestra valida.
+//
+// 2) TIMING: el producto-acumulado-saturado combinacional de un ciclo no
+//    entraba en 8ns (WNS -9.4ns con Vivado 2025.1). Como entre muestras
+//    validas hay >=32 ciclos, se parte en 4 etapas registradas y la
+//    recursion (y1/y2) se cierra al final, antes de la muestra siguiente.
+//    Las cuentas son exactamente las mismas (bit-exacto con el modelo).
+//    REQUISITO: al menos 5 ciclos de clk entre muestras validas
+//    (decimacion >= 5); con muestras mas seguidas se pisarian las etapas.
+//
+//    etapa 0 (s_axis_tvalid): x2<=x1, x1<=x0, x0<=din
+//    etapa 1: los 5 productos
+//    etapa 2: suma
+//    etapa 3: redondeo + escalado + saturacion -> y1/y2 y la salida
 reg signed [S_AXIS_DATA_BITS-1:0] x0, x1, x2;
 reg signed [S_AXIS_DATA_BITS-1:0] y1, y2;
+reg [3:0] v;  // v[k] = la etapa k tiene una muestra en curso
 
-always @(posedge clk)
-begin
-  if (~rst_n) begin
-    x0 <= 'h0; x1 <= 'h0; x2 <= 'h0;
-  end else begin
-    x0 <= din;
-    x1 <= x0;
-    x2 <= x1;
-  end
-end
-
-// productos: muestra (S_AXIS_DATA_BITS) * coeficiente (COEFF_BITS)
 localparam integer PROD_BITS = S_AXIS_DATA_BITS + COEFF_BITS;
-wire signed [PROD_BITS-1:0] prod_b0 = x0 * cfg_coeff_b0;
-wire signed [PROD_BITS-1:0] prod_b1 = x1 * cfg_coeff_b1;
-wire signed [PROD_BITS-1:0] prod_b2 = x2 * cfg_coeff_b2;
-wire signed [PROD_BITS-1:0] prod_a1 = y1 * cfg_coeff_a1;
-wire signed [PROD_BITS-1:0] prod_a2 = y2 * cfg_coeff_a2;
+localparam integer ACC_BITS  = PROD_BITS + 3;
+reg signed [PROD_BITS-1:0] p_b0, p_b1, p_b2, p_a1, p_a2;
+reg signed [ACC_BITS-1:0]  acc;
 
-// acumulador combinacional: 5 terminos de PROD_BITS, margen extra para
-// no desbordar en la suma (log2(5) ~ 3 bits)
-localparam integer ACC_BITS = PROD_BITS + 3;
-wire signed [ACC_BITS-1:0] acc = prod_b0 + prod_b1 + prod_b2 - prod_a1 - prod_a2;
-
-// reescalar (Qm.FRAC_BITS -> entero) y saturar al ancho de salida.
-// Redondeo al mas cercano (sumar medio LSB antes de correr los bits),
-// NO truncar - probado que truncar (siempre hacia -infinito) genera un
-// sesgo de DC sistematico que, realimentado por los polos del filtro
-// (muy cerca del circulo unidad), se acumula y satura la salida en
-// corridas largas incluso con una señal de entrada perfectamente
-// centrada en 0 (confirmado con una simulacion de 600k+ muestras a baja
-// frecuencia). El redondeo no elimina el limit-cycle de punto fijo del
-// todo (residual chico, ver README) pero evita el sesgo sistematico.
 localparam signed [ACC_BITS-1:0] ROUND_BIAS = {{(ACC_BITS-FRAC_BITS){1'b0}}, 1'b1, {(FRAC_BITS-1){1'b0}}};
 wire signed [ACC_BITS-FRAC_BITS-1:0] acc_scaled = (acc + ROUND_BIAS) >>> FRAC_BITS;
 localparam signed [S_AXIS_DATA_BITS-1:0] SAT_MAX = {1'b0, {(S_AXIS_DATA_BITS-1){1'b1}}};
 localparam signed [S_AXIS_DATA_BITS-1:0] SAT_MIN = {1'b1, {(S_AXIS_DATA_BITS-1){1'b0}}};
-
 wire signed [S_AXIS_DATA_BITS-1:0] y_next =
   (acc_scaled > $signed(SAT_MAX)) ? SAT_MAX :
   (acc_scaled < $signed(SAT_MIN)) ? SAT_MIN :
@@ -118,27 +103,41 @@ wire signed [S_AXIS_DATA_BITS-1:0] y_next =
 always @(posedge clk)
 begin
   if (~rst_n) begin
+    x0 <= 'h0; x1 <= 'h0; x2 <= 'h0;
+    y1 <= 'h0; y2 <= 'h0;
+    p_b0 <= 'h0; p_b1 <= 'h0; p_b2 <= 'h0; p_a1 <= 'h0; p_a2 <= 'h0;
+    acc <= 'h0;
     m_axis_tdata <= 'h0;
-    y1 <= 'h0;
-    y2 <= 'h0;
+    v <= 'h0;
   end else begin
-    m_axis_tdata <= y_next;
-    y2 <= y1;
-    y1 <= y_next;
+    v <= {v[2:0], s_axis_tvalid};
+    // etapa 0
+    if (s_axis_tvalid) begin
+      x0 <= din;
+      x1 <= x0;
+      x2 <= x1;
+    end
+    // etapa 1
+    if (v[0]) begin
+      p_b0 <= x0 * cfg_coeff_b0;
+      p_b1 <= x1 * cfg_coeff_b1;
+      p_b2 <= x2 * cfg_coeff_b2;
+      p_a1 <= y1 * cfg_coeff_a1;
+      p_a2 <= y2 * cfg_coeff_a2;
+    end
+    // etapa 2
+    if (v[1])
+      acc <= p_b0 + p_b1 + p_b2 - p_a1 - p_a2;
+    // etapa 3
+    if (v[2]) begin
+      m_axis_tdata <= y_next;
+      y2 <= y1;
+      y1 <= y_next;
+    end
   end
 end
 
-// tvalid sigue el mismo pipeline de 2 ciclos que tdata (captura de x0 ->
-// salida registrada), igual patron que osc_filter.v (tvalid_pipe)
-reg [1:0] tvalid_pipe;
-always @(posedge clk)
-begin
-  if (~rst_n)
-    tvalid_pipe <= 'h0;
-  else
-    tvalid_pipe <= {tvalid_pipe[0], s_axis_tvalid};
-end
-assign m_axis_tvalid = tvalid_pipe[1];
+assign m_axis_tvalid = v[3];
 assign s_axis_tready = m_axis_tready;
 
 endmodule

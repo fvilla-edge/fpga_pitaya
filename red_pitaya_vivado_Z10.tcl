@@ -165,6 +165,13 @@ file copy -force $rptFiles ./$path_out/
 # write checkpoint design
 ################################################################################
 
+# Sand Monitoring (port a Release_2026.1): con la estrategia por defecto
+# quedaba un camino del filtro de entrada del vendor (i_dfilt/pp_mult) en
+# WNS -0.233ns por la ocupacion extra de nuestro pasabanda/acumulador;
+# Performance_Explore lo cierra (WNS +0.056ns, verificado con Vivado 2025.1).
+if {$prj_name == "stream_app"} {
+   set_property strategy Performance_Explore [get_runs impl_1]
+}
 launch_runs impl_1
 wait_on_run impl_1
 

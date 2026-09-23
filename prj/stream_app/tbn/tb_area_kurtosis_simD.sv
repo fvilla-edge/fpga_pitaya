@@ -32,6 +32,11 @@
 module tb_area_kurtosis_simD;
 
   localparam S_AXIS_DATA_BITS = 16;
+  // Port 2026.1: como en la placa (decimacion 32, sin promediado: 0x30=0x20,
+  // 0x38=0) cada muestra real se mantiene HOLD ciclos y el decimador entrega
+  // una por cada HOLD. Antes dec=1 daba una muestra por ciclo, lo que escondia
+  // que el biquad avanzaba en cada ciclo sin mirar tvalid.
+  localparam integer HOLD = 32;
   localparam N_MUESTRAS       = 195312; // 50ms a fs=3906250Hz, igual al default de AREA_WINDOW_SAMPLES
 
   reg clk_axi = 0;
@@ -88,7 +93,7 @@ module tb_area_kurtosis_simD;
 
     // decimador en passthrough (factor 1): los datos ya vienen decimados
     // por 32 desde el archivo real (fs=3906250Hz, igual que en la placa)
-    .cfg_dec_factor_i (17'd1), .cfg_dec_rshift_i (4'h0), .cfg_avg_en_i (1'b0),
+    .cfg_dec_factor_i (HOLD), .cfg_dec_rshift_i (4'h0), .cfg_avg_en_i (1'b0),
     // Port 2026.1: entradas nuevas de upstream, en su valor neutro
     .cfg_hres_en_i (1'b0), .cfg_legacy_calib_i (1'b0),
     .cfg_timestamp_counter_i (64'h0), .cfg_timestamp_init_i (64'h0), .cfg_timestamp_init_we_i (1'b0),
@@ -154,7 +159,7 @@ module tb_area_kurtosis_simD;
       repeat (20) @(posedge clk_adc); // asentar los resets registrados en cascada (rstn_dec, etc.)
 
       for (i = 0; i < N_MUESTRAS; i = i + 1) begin
-        @(posedge clk_adc);
+        repeat (HOLD) @(posedge clk_adc);
         s_axis_tdata  <= use_evento ? mem_evento[i] : mem_reposo[i];
         s_axis_tvalid <= 1'b1;
       end
@@ -170,11 +175,11 @@ module tb_area_kurtosis_simD;
       // ventana en <=256/195312 = 0.13%, despreciable para esta
       // comparacion.
       for (i = 0; i < 256; i = i + 1) begin
-        @(posedge clk_adc);
+        repeat (HOLD) @(posedge clk_adc);
         s_axis_tdata  <= 16'h0;
         s_axis_tvalid <= 1'b1;
       end
-      repeat (10) @(posedge clk_adc); // drenar el ultimo tramo de la cadena
+      repeat (10*HOLD) @(posedge clk_adc); // drenar el ultimo tramo de la cadena
 
       $display("=== %0s ===", nombre);
       $display("window_count=%0d", area_window_count_o);
