@@ -239,6 +239,11 @@ assign s_axi_reg_rlast = s_axi_reg_rvalid;
 DT              dir_p;
 DT              dir_n;
 
+// Sand Monitoring: lectura directa de los pines DIO (registro 0x78) y DIO2_P
+// fijo como entrada (feedback del rele de Starlink), ver dio_lectura al final.
+DT              dir_p_efectiva;
+logic [16-1:0]  dio_pines;
+
 `ifdef SIMULATION
 
 assign sti.TDATA[0] = gpiop_i ;
@@ -252,12 +257,21 @@ end
 assign gpiop_o = gpio_outdat[15:8] ;
 assign gpion_o = gpio_outdat[ 7:0] ;
 
-assign dirp = dir_p;
+assign dirp = dir_p_efectiva;
 assign dirn = dir_n;
 assign gpio_trig_o = gpiop_i[0];
 
+dio_lectura i_dio_lectura (
+  .clk            (clk           ),
+  .dir_p_sw       (dir_p         ),
+  .pin_p          (gpiop_i       ),
+  .pin_n          (gpion_i       ),
+  .dir_p_efectiva (dir_p_efectiva),
+  .pines          (dio_pines     )
+);
+
 `else
-IOBUF iobuf_gpio_p [8-1:0] (.O (gpio_p_i), .IO(exp_p_io), .I(gpio_p_o), .T(dir_p));
+IOBUF iobuf_gpio_p [8-1:0] (.O (gpio_p_i), .IO(exp_p_io), .I(gpio_p_o), .T(dir_p_efectiva));
 IOBUF iobuf_gpio_n [8-1:0] (.O (gpio_n_i), .IO(exp_n_io), .I(gpio_n_o), .T(dir_n));
 
 assign sti.TDATA[0] = gpio_p_i ;
@@ -266,6 +280,15 @@ assign sti.TDATA[1] = gpio_n_i ;
 assign gpio_p_o = sto.TDATA[0][15:8] ;
 assign gpio_n_o = sto.TDATA[0][ 7:0] ;
 assign gpio_trig_o = gpio_p_i[0];
+
+dio_lectura i_dio_lectura (
+  .clk            (clk           ),
+  .dir_p_sw       (dir_p         ),
+  .pin_p          (gpio_p_i      ),
+  .pin_n          (gpio_n_i      ),
+  .dir_p_efectiva (dir_p_efectiva),
+  .pines          (dio_pines     )
+);
 
 `endif
 
@@ -463,6 +486,9 @@ begin
     // GPIO direction
     'h70 : reg_rd_data <=                  dir_p;
     'h74 : reg_rd_data <=                  dir_n;
+    // Sand Monitoring: estado de los pines, sincronizado (bit i = DIO<i>_P,
+    // bit 8+i = DIO<i>_N; DIO2_P = bit 2, mismo bit que 0x40000020 en v0.94)
+    'h78 : reg_rd_data <= {{32-16{1'b0}}, dio_pines};
 
     // DMA controls
     'h80 : reg_rd_data <=                  event_sel;
@@ -673,4 +699,42 @@ begin
     end
   end
 end       
+endmodule
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Sand Monitoring: lectura de los pines DIO sin pasar por el DMA
+//
+// - DIO2_P queda siempre como ENTRADA (T=1 del IOBUF) aunque el software
+//   escriba 0 en dir_p (0x70): es el feedback del rele de Starlink (colector
+//   de un NPN con pull-up de 10k a 3.3V). Asi control_starlink.sh puede leer
+//   el rele con este bitstream cargado, sin frenar la captura ni cargar v0.94.
+//   0x70 sigue devolviendo lo que escribio el software.
+// - Los pines son asincronicos respecto de clk: dos flops antes del registro.
+////////////////////////////////////////////////////////////////////////////////
+
+module dio_lectura #(
+  parameter int         W              = 8,
+  parameter logic [W-1:0] ENTRADA_FIJA_P = 8'h04   // DIO2_P
+)(
+  input  logic             clk,
+  input  logic [  W-1:0]   dir_p_sw,        // dir_p escrito por software (1 = entrada)
+  input  logic [  W-1:0]   pin_p,
+  input  logic [  W-1:0]   pin_n,
+  output logic [  W-1:0]   dir_p_efectiva,  // lo que va al T del IOBUF
+  output logic [2*W-1:0]   pines            // {pin_n, pin_p} sincronizado
+);
+
+assign dir_p_efectiva = dir_p_sw | ENTRADA_FIJA_P;
+
+(* ASYNC_REG = "TRUE" *) logic [2*W-1:0] sinc_1 = '0;
+(* ASYNC_REG = "TRUE" *) logic [2*W-1:0] sinc_2 = '0;
+
+always_ff @(posedge clk) begin
+  sinc_1 <= {pin_n, pin_p};
+  sinc_2 <= sinc_1;
+end
+
+assign pines = sinc_2;
+
 endmodule
