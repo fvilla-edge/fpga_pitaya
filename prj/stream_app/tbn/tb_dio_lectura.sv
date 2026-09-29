@@ -10,6 +10,7 @@ logic [ 7:0] pin_p = '0;
 logic [ 7:0] pin_n = '0;
 logic [ 7:0] dir_p_efectiva;
 logic [15:0] pines;
+logic [31:0] id;
 
 int ok = 0, fallas = 0;
 
@@ -29,6 +30,8 @@ initial begin
   dir_p_sw = 8'hFF; #1; chequear("dir 0xFF sin cambios",       dir_p_efectiva, 8'hFF);
   dir_p_sw = 8'hFB; #1; chequear("dir 0xFB (bit2 en 0) -> 0xFF", dir_p_efectiva, 8'hFF);
   dir_p_sw = 8'h00;
+
+  chequear("id (0x7C) = SM v1", id, 32'h534D_0001);
 
   // arranque: registro en 0
   @(negedge clk); chequear("pines al arranque", pines, 16'h0000);

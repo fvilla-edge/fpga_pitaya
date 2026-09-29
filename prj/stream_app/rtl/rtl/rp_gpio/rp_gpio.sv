@@ -243,6 +243,7 @@ DT              dir_n;
 // fijo como entrada (feedback del rele de Starlink), ver dio_lectura al final.
 DT              dir_p_efectiva;
 logic [16-1:0]  dio_pines;
+logic [32-1:0]  dio_id;
 
 `ifdef SIMULATION
 
@@ -267,7 +268,8 @@ dio_lectura i_dio_lectura (
   .pin_p          (gpiop_i       ),
   .pin_n          (gpion_i       ),
   .dir_p_efectiva (dir_p_efectiva),
-  .pines          (dio_pines     )
+  .pines          (dio_pines     ),
+  .id             (dio_id        )
 );
 
 `else
@@ -287,7 +289,8 @@ dio_lectura i_dio_lectura (
   .pin_p          (gpio_p_i      ),
   .pin_n          (gpio_n_i      ),
   .dir_p_efectiva (dir_p_efectiva),
-  .pines          (dio_pines     )
+  .pines          (dio_pines     ),
+  .id             (dio_id        )
 );
 
 `endif
@@ -489,6 +492,9 @@ begin
     // Sand Monitoring: estado de los pines, sincronizado (bit i = DIO<i>_P,
     // bit 8+i = DIO<i>_N; DIO2_P = bit 2, mismo bit que 0x40000020 en v0.94)
     'h78 : reg_rd_data <= {{32-16{1'b0}}, dio_pines};
+    // Sand Monitoring: ID fijo, para que el software sepa que este bitstream
+    // tiene 0x78 (en uno sin este cambio 0x78 y 0x7C leen 0)
+    'h7C : reg_rd_data <=                  dio_id;
 
     // DMA controls
     'h80 : reg_rd_data <=                  event_sel;
@@ -711,18 +717,22 @@ endmodule
 //   el rele con este bitstream cargado, sin frenar la captura ni cargar v0.94.
 //   0x70 sigue devolviendo lo que escribio el software.
 // - Los pines son asincronicos respecto de clk: dos flops antes del registro.
+// - id (0x7C): "SM" + version de este bloque. Cambiar la version si cambia
+//   el significado de 0x78.
 ////////////////////////////////////////////////////////////////////////////////
 
 module dio_lectura #(
   parameter int         W              = 8,
-  parameter logic [W-1:0] ENTRADA_FIJA_P = 8'h04   // DIO2_P
+  parameter logic [W-1:0] ENTRADA_FIJA_P = 8'h04,  // DIO2_P
+  parameter logic [31:0]  ID             = 32'h534D_0001
 )(
   input  logic             clk,
   input  logic [  W-1:0]   dir_p_sw,        // dir_p escrito por software (1 = entrada)
   input  logic [  W-1:0]   pin_p,
   input  logic [  W-1:0]   pin_n,
   output logic [  W-1:0]   dir_p_efectiva,  // lo que va al T del IOBUF
-  output logic [2*W-1:0]   pines            // {pin_n, pin_p} sincronizado
+  output logic [2*W-1:0]   pines,           // {pin_n, pin_p} sincronizado
+  output logic [   31:0]   id
 );
 
 assign dir_p_efectiva = dir_p_sw | ENTRADA_FIJA_P;
@@ -736,5 +746,6 @@ always_ff @(posedge clk) begin
 end
 
 assign pines = sinc_2;
+assign id    = ID;
 
 endmodule
