@@ -232,7 +232,11 @@ assign adc_cdcs_o = 1'b1 ;
         .gpio_trig         (gpio_trig),
         .trig_out          (trig_out),
         .clksel            (clksel),
-        .daisy_slave       (daisy_slave),
+        // Siempre Master: no usamos daisy chain, y con el conector sin nada
+        // el ruido del pozo simulaba un reloj -> streaming-server arrancaba en
+        // Slave y no llegaban muestras (crash-loops de campo del 29/9). La
+        // deteccion queda solo en el LED (led_o[2]) como diagnostico.
+        .daisy_slave       (1'b0),
         .adc_clk           (adc_clk_in),
         .clk_out           (clk_125),
         .rstn_out          (rstn_0),
