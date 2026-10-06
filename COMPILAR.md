@@ -24,7 +24,30 @@ adelante). Para el "por qué" de cada decisión y el historial del plan, ver
   (el sistema no tiene `pip` utilizable directo — Debian/Ubuntu moderno
   bloquea `pip install` global, PEP 668 — de ahí el venv).
 
-## Comandos básicos
+## Comandos básicos (Release_2026.1 / Vivado 2025.1, vigente desde 2026-10-06)
+
+Lo que sigue a esta sección es del Makefile viejo (2020.1); con el port a
+2026.1 cambió:
+
+- **Vivado 2025.1** está en `~/vitis/2025.1`:
+  `source ~/vitis/2025.1/Vivado/settings64.sh`. Su lanzador fuerza
+  `LC_ALL=en_US.UTF-8`; si ese locale no está instalado aborta con
+  `locale::facet::_S_create_c_locale name not valid`. Arreglo sin tocar el
+  sistema: `localedef -i en_US -f UTF-8 DIR/en_US.UTF-8` y
+  `export LOCPATH=DIR` (o instalarlo: `sudo locale-gen en_US.UTF-8`).
+- **Objetivo:** `make PRJ=stream_app MODEL=Z10 prj/stream_app/out/red_pitaya.bin`
+  (no existe `.bit.bin`). Genera el `.bit` y el `.bin` listo para
+  `fpga_manager` (mismo encabezado `bb00 0000 4400 2211`). La regla no tiene
+  dependencias: si `out/red_pitaya.bin` existe no recompila; borrarlo antes
+  (con copia: es el bitstream que corre en las placas).
+- Si `out/red_pitaya.prm` quedó de un build anterior, el último paso
+  (`write_cfgmem`) falla con "Cannot overwrite file out/red_pitaya.prm".
+  Borrarlo antes, o rehacer solo ese paso desde `prj/stream_app`:
+  `vivado -mode batch -source X.tcl` con
+  `write_cfgmem -force -format BIN -interface SMAPx32 -disablebitswap -loadbit "up 0x0 out/red_pitaya.bit" -file out/red_pitaya.bin`.
+- Tarda ~20 min (2026-10-06).
+
+## Comandos básicos (Makefile viejo, Vivado 2020.1)
 
 Todos se corren **desde la raíz del repo** (`~/RedPitaya-FPGA-Release_2025.2`).
 
