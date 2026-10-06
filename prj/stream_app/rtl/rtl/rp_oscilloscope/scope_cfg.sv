@@ -125,6 +125,16 @@ module scope_cfg
    input  wire [              32-1:0]  area_sum_x4_lo_i,
    input  wire [              32-1:0]  area_sum_x4_mid_i,
    input  wire [              32-1:0]  area_sum_x4_hi_i,
+   // IN2 como sensor independiente (Sand Monitoring, plan_in2_independiente.md):
+   // mismas sumas del canal 1 (ventana y pasabanda compartidos con el canal 0)
+   input  wire [              32-1:0]  area2_window_count_i,
+   input  wire [              32-1:0]  area2_sum_abs_lo_i,
+   input  wire [              32-1:0]  area2_sum_abs_hi_i,
+   input  wire [              32-1:0]  area2_sum_x2_lo_i,
+   input  wire [              32-1:0]  area2_sum_x2_hi_i,
+   input  wire [              32-1:0]  area2_sum_x4_lo_i,
+   input  wire [              32-1:0]  area2_sum_x4_mid_i,
+   input  wire [              32-1:0]  area2_sum_x4_hi_i,
 
    output wire [            4*32-1:0]  cfg_dma_dst_addr1_o ,
    output wire [            4*32-1:0]  cfg_dma_dst_addr2_o ,
@@ -269,6 +279,19 @@ localparam AREA_SUM_X2_HI            = 12'h33C; // R
 localparam AREA_SUM_X4_LO            = 12'h340; // R
 localparam AREA_SUM_X4_MID           = 12'h344; // R
 localparam AREA_SUM_X4_HI            = 12'h348; // R
+// Canal 1 (IN2), mismo orden que el canal 0. Ventana: AREA_WINDOW_SAMPLES (compartida)
+localparam AREA2_WINDOW_COUNT        = 12'h34C; // R
+localparam AREA2_SUM_ABS_LO          = 12'h350; // R
+localparam AREA2_SUM_ABS_HI          = 12'h354; // R
+localparam AREA2_SUM_X2_LO           = 12'h358; // R
+localparam AREA2_SUM_X2_HI           = 12'h35C; // R
+localparam AREA2_SUM_X4_LO           = 12'h360; // R
+localparam AREA2_SUM_X4_MID          = 12'h364; // R
+localparam AREA2_SUM_X4_HI           = 12'h368; // R
+// ID del bloque de area: "SM" + version. 0x0002 = area/kurtosis de 2 canales.
+// En un bitstream sin este registro la direccion lee 0 (default del case).
+localparam AREA_ID                   = 12'h36C; // R
+localparam AREA_ID_VALOR             = 32'h534D_0002;
 
 localparam STATUS_REG               = 12'h100;   // status of FPGA clock
 localparam TIMESTAMP_INIT_LO        = 12'h200;   // Lower 32 bits of current timestamp
@@ -623,6 +646,15 @@ begin
       AREA_SUM_X4_LO         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x4_lo_i;                                           end
       AREA_SUM_X4_MID        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x4_mid_i;                                          end
       AREA_SUM_X4_HI         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area_sum_x4_hi_i;                                           end
+      AREA2_WINDOW_COUNT     : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_window_count_i;                                       end
+      AREA2_SUM_ABS_LO       : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_sum_abs_lo_i;                                         end
+      AREA2_SUM_ABS_HI       : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_sum_abs_hi_i;                                         end
+      AREA2_SUM_X2_LO        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_sum_x2_lo_i;                                          end
+      AREA2_SUM_X2_HI        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_sum_x2_hi_i;                                          end
+      AREA2_SUM_X4_LO        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_sum_x4_lo_i;                                          end
+      AREA2_SUM_X4_MID       : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_sum_x4_mid_i;                                         end
+      AREA2_SUM_X4_HI        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = area2_sum_x4_hi_i;                                          end
+      AREA_ID                : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = AREA_ID_VALOR;                                              end
       STATUS_REG             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , daisy_slave, pll_locked}; end
 
       CALIB_OFFSET_ADDR_CH1  : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-16{1'b0}}               , cfg_calib_offset[1*16-1:0*16]};    end
